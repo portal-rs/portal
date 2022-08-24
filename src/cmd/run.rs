@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Args;
 
-use crate::config;
+use crate::{cmd::error::CmdError, config};
 
 #[derive(Args)]
 pub struct Arguments {
@@ -11,12 +11,14 @@ pub struct Arguments {
     config_path: Option<PathBuf>,
 }
 
-pub fn execute(args: Arguments) -> Result<(), clap::Error> {
-    let cfg = match args.config_path {
-        Some(path) => match config::read(path) {
+pub fn execute(args: Arguments) -> Result<(), CmdError> {
+    let _cfg = match args.config_path {
+        Some(path) => match config::read(path, None) {
+            Err(err) => return Err(CmdError::new("run", err.to_string())),
             Ok(cfg) => cfg,
-            Err(err) => return Err(err),
         },
         None => config::default(),
     };
+
+    Ok(())
 }

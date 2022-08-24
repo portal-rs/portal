@@ -1,5 +1,8 @@
 use clap::{Parser, Subcommand};
 
+use self::error::CmdError;
+
+mod error;
 mod run;
 
 #[derive(Parser)]
@@ -16,14 +19,17 @@ enum Commands {
     Run(run::Arguments),
 }
 
-pub fn execute() -> Result<(), clap::Error> {
+pub fn execute() -> Result<(), CmdError> {
     let cli = match Cli::try_parse() {
-        Err(err) => return Err(err),
+        Err(err) => return Err(CmdError::from(err)),
         Ok(c) => c,
     };
 
     match cli.commands {
-        Commands::Run(args) => run::execute(args),
+        Commands::Run(args) => match run::execute(args) {
+            Err(err) => return Err(err),
+            Ok(_) => {}
+        },
     }
 
     Ok(())
