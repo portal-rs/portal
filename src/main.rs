@@ -2,6 +2,8 @@ use std::process;
 
 mod cmd;
 mod config;
+mod constants;
+mod server;
 
 fn main() {
     match cmd::execute() {

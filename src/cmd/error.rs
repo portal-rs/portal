@@ -1,8 +1,8 @@
 use std::fmt;
 
 pub struct CmdError {
-    cmd: String,
     message: String,
+    cmd: String,
 }
 
 impl CmdError {
@@ -32,13 +32,9 @@ impl fmt::Display for CmdError {
 
 impl fmt::Debug for CmdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Command '{}' failed: {} ({}:{})",
-            self.cmd,
-            self.message,
-            file!(),
-            line!()
-        )
+        f.debug_struct("CmdError")
+            .field("message", &self.message)
+            .field("command", &self.cmd)
+            .finish()
     }
 }

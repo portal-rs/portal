@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Args;
 
-use crate::{cmd::error::CmdError, config};
+use crate::{cmd::error::CmdError, config::Config, server};
 
 #[derive(Args)]
 pub struct Arguments {
@@ -12,13 +12,21 @@ pub struct Arguments {
 }
 
 pub fn execute(args: Arguments) -> Result<(), CmdError> {
-    let _cfg = match args.config_path {
-        Some(path) => match config::read(path, None) {
+    let cfg = match args.config_path {
+        Some(path) => match Config::from_file(path, None) {
             Err(err) => return Err(CmdError::new("run", err.to_string())),
             Ok(cfg) => cfg,
         },
-        None => config::default(),
+        None => Config::default(),
     };
 
-    Ok(())
+    let mut srv = match server::Server::new(cfg) {
+        Ok(srv) => srv,
+        Err(err) => return Err(CmdError::new("run", err.to_string())),
+    };
+
+    match srv.run() {
+        Ok(_) => return Ok(()),
+        Err(err) => return Err(CmdError::new("run", err.to_string())),
+    };
 }
