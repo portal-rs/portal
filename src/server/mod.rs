@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tokio::{self, net};
 
-use crate::{config, constants, server::error::ServerError, server::network::Network};
+use crate::{config, constants, pack, server::error::ServerError, server::network::Network};
 
 pub mod error;
 pub mod network;
@@ -83,10 +83,10 @@ impl Server {
                 };
 
                 let socket = Arc::new(socket);
-                let mut buf = [0u8; constants::udp::UDP_MIN_MESSAGE_SIZE];
+                let mut data = [0u8; constants::udp::UDP_MIN_MESSAGE_SIZE];
 
                 loop {
-                    let (len, addr) = match socket.recv_from(&mut buf).await {
+                    let (len, addr) = match socket.recv_from(&mut data).await {
                         Ok(result) => result,
                         Err(err) => {
                             // TODO (Techassi): Log this
@@ -98,7 +98,7 @@ impl Server {
                     let sender = socket.clone();
 
                     tokio::spawn(async move {
-                        handle_udp(buf[..len].to_vec(), addr, sender).await;
+                        handle_udp(data[..len].to_vec(), addr, sender).await;
                     });
                 }
             }
@@ -106,6 +106,17 @@ impl Server {
     }
 }
 
-async fn handle_udp(buf: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
-    println!("Received {} bytes from {}", buf.len(), addr);
+async fn handle_udp(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
+    println!(
+        "Received {} bytes from {}:\n{:02X?}",
+        data.len(),
+        addr,
+        data
+    );
+
+    // Unpack DNS header data
+    let (header, offset) = match pack::unpack_header(data) {
+        Ok(_) => todo!(),
+        Err(_) => todo!(),
+    };
 }
