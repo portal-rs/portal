@@ -7,9 +7,9 @@ use crate::types::rr::{Class, Type};
 ///
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.2
 pub struct Question {
-    name: String,
-    typ: Type,
-    class: Class,
+    pub name: String,
+    pub typ: Type,
+    pub class: Class,
 }
 
 impl Default for Question {
