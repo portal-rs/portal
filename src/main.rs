@@ -4,7 +4,7 @@ mod binary;
 mod cmd;
 mod config;
 mod constants;
-mod pack;
+mod packing;
 mod server;
 mod types;
 
