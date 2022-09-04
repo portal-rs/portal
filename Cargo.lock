@@ -161,19 +161,9 @@ name = "portal"
 version = "0.0.1"
 dependencies = [
  "clap",
- "portal_macros",
  "serde",
  "tokio",
  "toml",
-]
-
-[[package]]
-name = "portal_macros"
-version = "0.0.1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
