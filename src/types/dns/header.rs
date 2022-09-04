@@ -2,11 +2,8 @@ use crate::types::{opcode::Opcode, rcode::Rcode};
 
 /// [`Header`] describes the header data of a message. This header format enables easy access to all header fields. The
 /// [`RawHeader`] in comparison stores raw data directly from the wire.
-///
-/// ### Further information
-///
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Header {
     pub id: u16,
     pub is_query: bool,
