@@ -7,9 +7,10 @@ pub enum Endianness {
     Little,
 }
 
-pub type BinaryResult<T> = Result<T, BinaryError>;
+pub type BinaryReadResult<T> = Result<T, BinaryError>;
+pub type BinaryWriteResult = Result<(), BinaryError>;
 
-pub fn read_u16(data: &[u8], endianness: Endianness) -> BinaryResult<u16> {
+pub fn read_u16(data: &[u8], endianness: Endianness) -> BinaryReadResult<u16> {
     if data.len() < 2 {
         return Err(BinaryError::new("Slice of bytes too short"));
     }
@@ -26,7 +27,7 @@ pub fn read_u16(data: &[u8], endianness: Endianness) -> BinaryResult<u16> {
     }
 }
 
-pub fn read_u32(data: &[u8], endianness: Endianness) -> BinaryResult<u32> {
+pub fn read_u32(data: &[u8], endianness: Endianness) -> BinaryReadResult<u32> {
     if data.len() < 4 {
         return Err(BinaryError::new("Slice of bytes too short"));
     }
@@ -49,7 +50,7 @@ pub fn read_u32(data: &[u8], endianness: Endianness) -> BinaryResult<u32> {
     }
 }
 
-pub fn read_u64(data: &[u8], endianness: Endianness) -> BinaryResult<u64> {
+pub fn read_u64(data: &[u8], endianness: Endianness) -> BinaryReadResult<u64> {
     if data.len() < 8 {
         return Err(BinaryError::new("Slice of bytes too short"));
     }
@@ -78,4 +79,77 @@ pub fn read_u64(data: &[u8], endianness: Endianness) -> BinaryResult<u64> {
             Ok(v)
         }
     }
+}
+
+pub fn put_u16(value: u16, buf: &mut [u8], endianness: Endianness) -> BinaryWriteResult {
+    if buf.len() < 2 {
+        return Err(BinaryError::new("Buf too short"));
+    }
+
+    match endianness {
+        Endianness::Big => {
+            buf[0] = (value >> 8) as u8;
+            buf[1] = value as u8;
+        }
+        Endianness::Little => {
+            buf[0] = value as u8;
+            buf[1] = (value >> 8) as u8;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn put_u32(value: u32, buf: &mut [u8], endianness: Endianness) -> BinaryWriteResult {
+    if buf.len() < 4 {
+        return Err(BinaryError::new("Buf too short"));
+    }
+
+    match endianness {
+        Endianness::Big => {
+            buf[0] = (value >> 24) as u8;
+            buf[1] = (value >> 16) as u8;
+            buf[2] = (value >> 8) as u8;
+            buf[3] = value as u8;
+        }
+        Endianness::Little => {
+            buf[0] = value as u8;
+            buf[1] = (value >> 8) as u8;
+            buf[2] = (value >> 16) as u8;
+            buf[3] = (value >> 24) as u8;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn put_u64(value: u64, buf: &mut [u8], endianness: Endianness) -> BinaryWriteResult {
+    if buf.len() < 8 {
+        return Err(BinaryError::new("Buf too short"));
+    }
+
+    match endianness {
+        Endianness::Big => {
+            buf[0] = (value >> 56) as u8;
+            buf[1] = (value >> 48) as u8;
+            buf[2] = (value >> 40) as u8;
+            buf[3] = (value >> 32) as u8;
+            buf[4] = (value >> 24) as u8;
+            buf[5] = (value >> 16) as u8;
+            buf[6] = (value >> 8) as u8;
+            buf[7] = value as u8;
+        }
+        Endianness::Little => {
+            buf[0] = value as u8;
+            buf[1] = (value >> 8) as u8;
+            buf[2] = (value >> 16) as u8;
+            buf[3] = (value >> 24) as u8;
+            buf[4] = (value >> 32) as u8;
+            buf[5] = (value >> 40) as u8;
+            buf[6] = (value >> 48) as u8;
+            buf[7] = (value >> 56) as u8;
+        }
+    }
+
+    Ok(())
 }
