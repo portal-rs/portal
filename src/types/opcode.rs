@@ -1,4 +1,5 @@
 /// [`Opcode`] describes the kind of query of the message.
+#[derive(Debug)]
 pub enum Opcode {
     Query,
     IQuery,

@@ -6,20 +6,21 @@ use crate::types::{opcode::Opcode, rcode::Rcode};
 /// ### Further information
 ///
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
+#[derive(Debug)]
 pub struct Header {
-    id: u16,
-    is_query: bool,
-    opcode: Opcode,
-    authoritative: bool,
-    truncated: bool,
-    rec_des: bool,
-    rec_avail: bool,
-    zero: bool,
-    rcode: Rcode,
-    qdcount: u16,
-    ancount: u16,
-    nscount: u16,
-    arcount: u16,
+    pub id: u16,
+    pub is_query: bool,
+    pub opcode: Opcode,
+    pub authoritative: bool,
+    pub truncated: bool,
+    pub rec_des: bool,
+    pub rec_avail: bool,
+    pub zero: bool,
+    pub rcode: Rcode,
+    pub qdcount: u16,
+    pub ancount: u16,
+    pub nscount: u16,
+    pub arcount: u16,
 }
 
 impl Header {
@@ -77,52 +78,52 @@ impl From<RawHeader> for Header {
 /// data like QR, OPCODE, etc. which gets split up further by bit masks. The remaining four chunks contain counts for
 /// questions, answers, nameserver and additional records.
 pub struct RawHeader {
-    id: u16,
-    flags: u16,
-    qdcount: u16,
-    ancount: u16,
-    nscount: u16,
-    arcount: u16,
+    pub id: u16,
+    pub flags: u16,
+    pub qdcount: u16,
+    pub ancount: u16,
+    pub nscount: u16,
+    pub arcount: u16,
 }
 
 impl RawHeader {
     /// Returns if this DNS message is a query (QR) by applying a bit mask.
-    pub fn is_query(self) -> bool {
+    pub fn is_query(&self) -> bool {
         return self.flags & (1 << 15) == 0;
     }
 
     /// Returns the OPCODE of the DNS message by applying a bit mask.
-    pub fn opcode(self) -> Opcode {
+    pub fn opcode(&self) -> Opcode {
         return Opcode::from((self.flags >> 11) & 0xF);
     }
 
     /// Returns if the DNS message is authoritative (AA) by applying a bit mask.
-    pub fn is_authoritative(self) -> bool {
+    pub fn is_authoritative(&self) -> bool {
         return self.flags & (1 << 10) != 0;
     }
 
     /// Returns if the DNS message is truncated (TC) by applying a bit mask.
-    pub fn is_truncated(self) -> bool {
+    pub fn is_truncated(&self) -> bool {
         return self.flags & (1 << 9) != 0;
     }
 
     /// Returns if the RD flag is set by applying a bit mask.
-    pub fn is_rec_des(self) -> bool {
+    pub fn is_rec_des(&self) -> bool {
         return self.flags & (1 << 8) != 0;
     }
 
     /// Returns if the RA flag is set by applying a bit mask.
-    pub fn is_rec_avail(self) -> bool {
+    pub fn is_rec_avail(&self) -> bool {
         return self.flags & (1 << 7) != 0;
     }
 
     /// Returns if the ZERO (Z) bits are set by applying a bit mask.
-    pub fn is_zero(self) -> bool {
+    pub fn is_zero(&self) -> bool {
         return self.flags & (1 << 6) != 0;
     }
 
     /// Returns the OPCODE of the DNS message by applying a bit mask.
-    pub fn rcode(self) -> Rcode {
+    pub fn rcode(&self) -> Rcode {
         return Rcode::from(self.flags & 0xF);
     }
 }

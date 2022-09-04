@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tokio::{self, net};
 
-use crate::{config, constants, pack, server::error::ServerError, server::network::Network};
+use crate::{config, constants, packing, server::error::ServerError, server::network::Network};
 
 pub mod error;
 pub mod network;
@@ -115,8 +115,10 @@ async fn handle_udp(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>
     );
 
     // Unpack DNS header data
-    let (header, offset) = match pack::unpack_header(data) {
-        Ok(_) => todo!(),
+    let (header, offset) = match packing::unpack_header(data) {
+        Ok(result) => result,
         Err(_) => todo!(),
     };
+
+    println!("{:#?}, {}", header, offset);
 }

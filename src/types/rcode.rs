@@ -1,4 +1,5 @@
 /// [`Rcode`] describes the kind of response.
+#[derive(Debug)]
 pub enum Rcode {
     NoError,
     FormatError,
