@@ -1,9 +1,9 @@
 use crate::{
-    binary,
+    binary, constants,
     packing::error::UnpackError,
     types::{
         dns::{Header, Message, Question, RawHeader},
-        rr::{Class, Type},
+        rr::{Class, Type, RR},
     },
 };
 
@@ -51,32 +51,32 @@ pub fn unpack_u64(data: &Vec<u8>, offset: usize) -> UnpackResult<u64> {
 pub fn unpack_header(data: &Vec<u8>) -> Result<(Header, usize), UnpackError> {
     let (id, offset) = match unpack_u16(&data, 0) {
         Ok(id) => id,
-        Err(_) => todo!(),
+        Err(_) => return Err(UnpackError::new("Failed to unpack DNS header ID")),
     };
 
     let (flags, offset) = match unpack_u16(&data, offset) {
         Ok(flags) => flags,
-        Err(_) => todo!(),
+        Err(_) => return Err(UnpackError::new("Failed to unpack DNS header flags")),
     };
 
     let (qdcount, offset) = match unpack_u16(&data, offset) {
         Ok(qdcount) => qdcount,
-        Err(_) => todo!(),
+        Err(_) => return Err(UnpackError::new("Failed to unpack DNS header QDCOUNT")),
     };
 
     let (ancount, offset) = match unpack_u16(&data, offset) {
         Ok(ancount) => ancount,
-        Err(_) => todo!(),
+        Err(_) => return Err(UnpackError::new("Failed to unpack DNS header ANCOUNT")),
     };
 
     let (nscount, offset) = match unpack_u16(&data, offset) {
         Ok(nscount) => nscount,
-        Err(_) => todo!(),
+        Err(_) => return Err(UnpackError::new("Failed to unpack DNS header NSCOUNT")),
     };
 
     let (arcount, offset) = match unpack_u16(&data, offset) {
         Ok(arcount) => arcount,
-        Err(_) => todo!(),
+        Err(_) => return Err(UnpackError::new("Failed to unpack DNS header ARCOUNT")),
     };
 
     let header = Header::from(RawHeader {
@@ -98,7 +98,6 @@ pub fn unpack_message(
     offset: usize,
 ) -> Result<Message, UnpackError> {
     let mut message = Message::new_with_header(header);
-    let mut offset = offset;
 
     // Immediatly return if the message only consists of header data without
     // any body data
@@ -113,7 +112,51 @@ pub fn unpack_message(
     //
     // Loop over the questions. Usually there is only one question, but the
     // spec accounts for the possibility to ask multiple questions at once.
-    for i in 0..message.header.qdcount {
+    let (mut questions, offset, qdcount) =
+        match unpack_questions(message.header.qdcount, &data, offset) {
+            Ok(result) => result,
+            Err(_) => todo!(),
+        };
+    message.header.qdcount = qdcount.unwrap_or(message.header.qdcount);
+    message.question.append(&mut questions);
+
+    // Unpack list of answer RRS in the answer section
+    let (mut answers, offset, ancount) = match unpack_rrs(message.header.ancount, &data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+    message.header.ancount = ancount.unwrap_or(message.header.ancount);
+    message.answer.append(&mut answers);
+
+    // Unpack list of nameserver RRs in the authority section
+    let (mut nameservers, offset, nscount) = match unpack_rrs(message.header.nscount, &data, offset)
+    {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+    message.header.nscount = nscount.unwrap_or(message.header.nscount);
+    message.authority.append(&mut nameservers);
+
+    // Unpack list of additional RRs in the additional section
+    let (mut additional, _, arcount) = match unpack_rrs(message.header.arcount, &data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+    message.header.arcount = arcount.unwrap_or(message.header.arcount);
+    message.additional.append(&mut additional);
+
+    Ok(message)
+}
+
+/// Unpacks a list of [`Question`]s and returns the optional correct QDCOUNT.
+fn unpack_questions(
+    count: u16,
+    data: &Vec<u8>,
+    mut offset: usize,
+) -> Result<(Vec<Question>, usize, Option<u16>), UnpackError> {
+    let mut questions: Vec<Question> = Vec::new();
+
+    for i in 0..count {
         let initial_offset = offset;
 
         let (question, new_offset) = match unpack_question(&data, offset) {
@@ -124,15 +167,14 @@ pub fn unpack_message(
         // If the initial offset and the offset after unwrapping the question
         // match we know that QDCOUNT is wrong.
         if new_offset == initial_offset {
-            message.header.qdcount = i as u16;
-            break;
+            return Ok((questions, offset, Some(i)));
         }
 
         offset = new_offset;
-        message.question.push(question);
+        questions.push(question);
     }
 
-    Ok(message)
+    Ok((questions, offset, Some(0)))
 }
 
 /// Unpacks a single [`Question`]. Returns the unpacked question and new offset.
@@ -159,6 +201,21 @@ fn unpack_question(data: &Vec<u8>, offset: usize) -> Result<(Question, usize), U
     };
 
     Ok((question, offset))
+}
+
+fn unpack_rrs(
+    count: u16,
+    data: &Vec<u8>,
+    offset: usize,
+) -> Result<(Vec<RR>, usize, Option<u16>), UnpackError> {
+    let rrs: Vec<RR> = Vec::new();
+
+    // Nothing to do, return
+    if count == 0 {
+        return Ok((rrs, offset, Some(0)));
+    }
+
+    Ok((rrs, offset, Some(0)))
 }
 
 /// Unpacks a domain name (e.g. 'example.com').
@@ -195,8 +252,25 @@ fn unpack_domain_name(data: &Vec<u8>, offset: usize) -> Result<(String, usize), 
                     break;
                 }
 
+                // The label length is bigger than the complete DNS message
                 if b > data_length {
                     return Err(UnpackError::new("Offset overflow unpacking domain name"));
+                }
+
+                // The maximum label length can only be 0x3F (63) as the first
+                // two bits are reserved (e.g. for compression pointers).
+                if b > constants::dns::MAX_LABEL_LENGTH {
+                    return Err(UnpackError::new(
+                        "Invalid label length while unpacking domain name",
+                    ));
+                }
+
+                // If the current buffer size + the new label length exceed
+                // the maximum domain length.
+                if buf.len() + b > constants::dns::MAX_DOMAIN_LENGTH {
+                    return Err(UnpackError::new(
+                        "Max domain length exceeded while unpacking domain name",
+                    ));
                 }
 
                 // Extract the number of octets indicated by the length octet.
@@ -218,22 +292,23 @@ fn unpack_domain_name(data: &Vec<u8>, offset: usize) -> Result<(String, usize), 
                     initial_offset = offset + 1;
                 }
 
-                // Follow the pointer by updating the offset. We first XOR the
-                // current octet with 0xC0 (pointer indicator), shift the value
-                // by 8 bits and then ORing to get the final pointer target.
-                offset = (b ^ 0xC0) << 8 | data[offset] as usize;
+                // Follow the pointer by updating the offset. We AND with 0x3F
+                // (00111111) to get the pointer target value.
+                offset = b & constants::dns::COMPRESSION_POINTER_MASK;
                 followed = true;
             }
             _ => {
+                // This state is impossible to reach, but we need this branch
+                // to satisfy the Rust compiler.
                 return Err(UnpackError::new(
                     "Impossible to reach: Unpacking domain name",
-                ))
+                ));
             }
         }
     }
 
     // If we followed any compression pointers, we need to set the offset to
-    // the initial value.
+    // the initial value to ensure we continue at the correct offset location.
     if followed {
         offset = initial_offset;
     }

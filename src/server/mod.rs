@@ -117,14 +117,20 @@ async fn handle_udp(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>
     // Unpack DNS header data
     let (header, offset) = match packing::unpack_header(&data) {
         Ok(result) => result,
-        Err(_) => todo!(),
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
     };
 
     // Now we unpack the complete DNS message
     let message = match packing::unpack_message(header.clone(), data, offset) {
         Ok(msg) => msg,
-        Err(_) => todo!(),
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
     };
 
-    println!("{:#?}, {}", header, offset);
+    println!("{:#?}, {:#?}", header, message);
 }

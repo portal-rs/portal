@@ -15,6 +15,7 @@ pub trait ResourceRecord: ToString + PartialEq<Self> {
     fn pack(&self, buf: Vec<u8>, offset: usize) -> Result<usize, ()>;
 }
 
+#[derive(Debug)]
 pub struct Header {
     name: String,
     typ: Type,
@@ -23,6 +24,7 @@ pub struct Header {
     rdlen: u16,
 }
 
+#[derive(Debug)]
 pub enum RR {
     A(a::A),
     AAAA(aaaa::AAAA),
