@@ -83,7 +83,7 @@ impl Server {
                 };
 
                 let socket = Arc::new(socket);
-                let mut data = [0u8; constants::udp::UDP_MIN_MESSAGE_SIZE];
+                let mut data = [0u8; constants::udp::MIN_MESSAGE_SIZE];
 
                 loop {
                     let (len, addr) = match socket.recv_from(&mut data).await {
