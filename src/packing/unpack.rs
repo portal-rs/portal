@@ -3,7 +3,7 @@ use crate::{
     packing::error::UnpackError,
     types::{
         dns::{Header, Message, Question, RawHeader},
-        rr::{Class, Type, RR},
+        rr::{Class, RRHeader, Record, ResourceRecord, Type},
     },
 };
 
@@ -48,7 +48,7 @@ pub fn unpack_u64(data: &Vec<u8>, offset: usize) -> UnpackResult<u64> {
 /// Unpacks the first 12 octects from the DNS message. The DNS header is fixed in size. The function returns the
 /// [`Header`] it self and the offset (which will always be 12). This function is usually the first step in unpacking
 /// the whole message.
-pub fn unpack_header(data: &Vec<u8>) -> Result<(Header, usize), UnpackError> {
+pub fn unpack_header(data: &Vec<u8>) -> UnpackResult<Header> {
     let (id, offset) = match unpack_u16(&data, 0) {
         Ok(id) => id,
         Err(_) => return Err(UnpackError::new("Failed to unpack DNS header ID")),
@@ -164,17 +164,18 @@ fn unpack_questions(
             Err(_) => todo!(),
         };
 
+        offset = new_offset;
+
         // If the initial offset and the offset after unwrapping the question
         // match we know that QDCOUNT is wrong.
         if new_offset == initial_offset {
             return Ok((questions, offset, Some(i)));
         }
 
-        offset = new_offset;
         questions.push(question);
     }
 
-    Ok((questions, offset, Some(0)))
+    Ok((questions, offset, None))
 }
 
 /// Unpacks a single [`Question`]. Returns the unpacked question and new offset.
@@ -203,19 +204,93 @@ fn unpack_question(data: &Vec<u8>, offset: usize) -> Result<(Question, usize), U
     Ok((question, offset))
 }
 
+/// Unpacks a list of [`ResourceRecord`]s and returns the optional correct COUNT.
 fn unpack_rrs(
     count: u16,
     data: &Vec<u8>,
-    offset: usize,
-) -> Result<(Vec<RR>, usize, Option<u16>), UnpackError> {
-    let rrs: Vec<RR> = Vec::new();
+    mut offset: usize,
+) -> Result<(Vec<ResourceRecord>, usize, Option<u16>), UnpackError> {
+    let mut rrs: Vec<ResourceRecord> = Vec::new();
 
     // Nothing to do, return
     if count == 0 {
-        return Ok((rrs, offset, Some(0)));
+        return Ok((rrs, offset, None));
     }
 
-    Ok((rrs, offset, Some(0)))
+    for i in 0..count {
+        let initial_offset = offset;
+
+        let (rr, new_offset) = match unpack_rr(data, offset) {
+            Ok(result) => result,
+            Err(err) => return Err(UnpackError::new(format!("Failed to unpack RRs: {}", err))),
+        };
+
+        offset = new_offset;
+
+        // If the initial offset and the offset after unwrapping the RR
+        // match we know that count is wrong.
+        if new_offset == initial_offset {
+            return Ok((rrs, offset, Some(i)));
+        }
+
+        rrs.push(rr)
+    }
+
+    Ok((rrs, offset, None))
+}
+
+/// Unpacks a single [`ResourceRecord`].
+fn unpack_rr(data: &Vec<u8>, offset: usize) -> Result<(ResourceRecord, usize), UnpackError> {
+    let (header, offset) = match unpack_rr_header(data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+
+    let rr = ResourceRecord::from(header);
+
+    let offset = match rr.unpack(data, offset) {
+        Ok(offset) => offset,
+        Err(_) => todo!(),
+    };
+
+    Ok((rr, offset))
+}
+
+fn unpack_rr_header(data: &Vec<u8>, offset: usize) -> Result<(RRHeader, usize), UnpackError> {
+    let (name, offset) = match unpack_domain_name(data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+
+    let (typ, offset) = match unpack_u16(data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+
+    let (class, offset) = match unpack_u16(data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+
+    let (ttl, offset) = match unpack_u32(data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+
+    let (rdlen, offset) = match unpack_u16(data, offset) {
+        Ok(result) => result,
+        Err(_) => todo!(),
+    };
+
+    let header = RRHeader {
+        name,
+        typ: Type::from(typ),
+        class: Class::from(class),
+        ttl,
+        rdlen,
+    };
+
+    Ok((header, offset))
 }
 
 /// Unpacks a domain name (e.g. 'example.com').

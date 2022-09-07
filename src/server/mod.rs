@@ -107,13 +107,6 @@ impl Server {
 }
 
 async fn handle_udp(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
-    println!(
-        "Received {} bytes from {}:\n{:02X?}",
-        data.len(),
-        addr,
-        data
-    );
-
     // Unpack DNS header data
     let (header, offset) = match packing::unpack_header(&data) {
         Ok(result) => result,
@@ -132,5 +125,5 @@ async fn handle_udp(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>
         }
     };
 
-    println!("{:#?}, {:#?}", header, message);
+    println!("{:#?}", message);
 }

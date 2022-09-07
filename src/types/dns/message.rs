@@ -1,4 +1,4 @@
-use crate::types::rr::RR;
+use crate::types::rr::ResourceRecord;
 
 use super::{Header, Question};
 
@@ -8,9 +8,9 @@ use super::{Header, Question};
 pub struct Message {
     pub header: Header,
     pub question: Vec<Question>,
-    pub answer: Vec<RR>,
-    pub authority: Vec<RR>,
-    pub additional: Vec<RR>,
+    pub answer: Vec<ResourceRecord>,
+    pub authority: Vec<ResourceRecord>,
+    pub additional: Vec<ResourceRecord>,
 }
 
 impl Default for Message {
