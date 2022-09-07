@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.17", features = ["derive"] }
+enum_dispatch = "0.3.8"
 serde = { version = "1.0.144", features = ["derive"] }
 tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros"] }
 toml = "0.5.9"
