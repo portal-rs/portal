@@ -1,12 +1,11 @@
-use std::net::SocketAddr;
-use std::sync::Arc;
+use tokio;
 
-use tokio::{self, net};
+use crate::{config, server::error::ServerError, server::network::Network};
 
-use crate::{config, constants, packing, server::error::ServerError, server::network::Network};
-
+mod accept;
 pub mod error;
 pub mod network;
+mod udp;
 
 pub struct Server {
     addr_port: std::net::SocketAddr,
@@ -66,64 +65,10 @@ impl Server {
         }
         self.running = true;
 
-        // Setup shared data here
-
         // Either start the UDP socket or TCP listener
         match self.network {
             Network::Tcp => todo!(),
-            Network::Udp => {
-                let socket = match net::UdpSocket::bind(self.addr_port).await {
-                    Ok(socket) => socket,
-                    Err(err) => {
-                        return Err(ServerError::new(format!(
-                            "Failed to bind UDP socket: {}",
-                            err
-                        )))
-                    }
-                };
-
-                let socket = Arc::new(socket);
-                let mut data = [0u8; constants::udp::MIN_MESSAGE_SIZE];
-
-                loop {
-                    let (len, addr) = match socket.recv_from(&mut data).await {
-                        Ok(result) => result,
-                        Err(err) => {
-                            // TODO (Techassi): Log this
-                            println!("{}", err);
-                            continue;
-                        }
-                    };
-
-                    let sender = socket.clone();
-
-                    tokio::spawn(async move {
-                        handle_udp(data[..len].to_vec(), addr, sender).await;
-                    });
-                }
-            }
+            Network::Udp => udp::serve(self.addr_port).await,
         }
     }
-}
-
-async fn handle_udp(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
-    // Unpack DNS header data
-    let (header, offset) = match packing::unpack_header(&data) {
-        Ok(result) => result,
-        Err(err) => {
-            println!("{}", err);
-            return;
-        }
-    };
-
-    // Now we unpack the complete DNS message
-    let message = match packing::unpack_message(header.clone(), data, offset) {
-        Ok(msg) => msg,
-        Err(err) => {
-            println!("{}", err);
-            return;
-        }
-    };
-
-    println!("{:#?}", message);
 }
