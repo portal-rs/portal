@@ -1,26 +1,26 @@
-use std::net::Ipv4Addr;
+use crate::{
+    packing::UnpackError,
+    types::rr::{RRHeader, Record, ResourceRecord},
+};
 
-use crate::packing::UnpackError;
-
-use super::{RRHeader, Record, ResourceRecord};
-
+/// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
 #[derive(Debug)]
-pub struct A {
+pub struct CNAME {
     pub header: RRHeader,
-    pub address: Ipv4Addr,
+    pub target: String,
 }
 
-impl A {
+impl CNAME {
     pub fn new_with_header(header: RRHeader) -> ResourceRecord {
         return Self {
             header,
-            address: Ipv4Addr::new(0, 0, 0, 0),
+            target: String::new(),
         }
         .into();
     }
 }
 
-impl Record for A {
+impl Record for CNAME {
     fn header(&self) -> &RRHeader {
         return &self.header;
     }
@@ -30,7 +30,7 @@ impl Record for A {
     }
 
     fn len(&self) -> u16 {
-        return 4;
+        return (self.target.len() + 1) as u16;
     }
 
     fn unpack(&self, data: &Vec<u8>, offset: usize) -> Result<usize, UnpackError> {
@@ -42,14 +42,14 @@ impl Record for A {
     }
 }
 
-impl ToString for A {
+impl ToString for CNAME {
     fn to_string(&self) -> String {
-        format!("A <{}>", self.address)
+        format!("CNAME <{}>", self.target)
     }
 }
 
-impl PartialEq<Self> for A {
+impl PartialEq<Self> for CNAME {
     fn eq(&self, other: &Self) -> bool {
-        self.address == other.address
+        self.target == other.target
     }
 }

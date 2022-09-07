@@ -1,24 +1,26 @@
-use crate::packing::UnpackError;
+use crate::{
+    packing::UnpackError,
+    types::rr::{RRHeader, Record, ResourceRecord},
+};
 
-use super::{RRHeader, Record, ResourceRecord};
-
+/// https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.4 (Obsolete)
 #[derive(Debug)]
-pub struct CNAME {
+pub struct MD {
     pub header: RRHeader,
-    pub target: String,
+    pub madname: String,
 }
 
-impl CNAME {
+impl MD {
     pub fn new_with_header(header: RRHeader) -> ResourceRecord {
         return Self {
             header,
-            target: String::new(),
+            madname: String::new(),
         }
         .into();
     }
 }
 
-impl Record for CNAME {
+impl Record for MD {
     fn header(&self) -> &RRHeader {
         return &self.header;
     }
@@ -28,7 +30,7 @@ impl Record for CNAME {
     }
 
     fn len(&self) -> u16 {
-        return (self.target.len() + 1) as u16;
+        return (self.madname.len() + 1) as u16;
     }
 
     fn unpack(&self, data: &Vec<u8>, offset: usize) -> Result<usize, UnpackError> {
@@ -40,14 +42,14 @@ impl Record for CNAME {
     }
 }
 
-impl ToString for CNAME {
+impl ToString for MD {
     fn to_string(&self) -> String {
-        format!("CNAME <{}>", self.target)
+        format!("MD <{}>", self.madname)
     }
 }
 
-impl PartialEq<Self> for CNAME {
+impl PartialEq<Self> for MD {
     fn eq(&self, other: &Self) -> bool {
-        self.target == other.target
+        self.madname == other.madname
     }
 }
