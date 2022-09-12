@@ -1,15 +1,24 @@
-use tokio;
+use std::sync::Arc;
 
-use crate::{config, server::error::ServerError, server::network::Network};
+use tokio::{self, net};
+
+use crate::{
+    config, constants,
+    resolver::{ResolveMode, Resolver},
+    server::error::ServerError,
+    utils::network::Network,
+};
+
+pub mod error;
 
 mod accept;
-pub mod error;
-pub mod network;
+mod tcp;
 mod udp;
 
 pub struct Server {
     addr_port: std::net::SocketAddr,
     ancillary_size: usize,
+    resolve_mode: ResolveMode,
     network: Network,
     running: bool,
 }
@@ -22,6 +31,7 @@ impl Default for Server {
                 53,
             ),
             ancillary_size: 0,
+            resolve_mode: ResolveMode::Recursive,
             network: Network::Tcp,
             running: false,
         }
@@ -50,9 +60,20 @@ impl Server {
             }
         };
 
+        let resolve_mode = match ResolveMode::parse(cfg.resolver.mode) {
+            Ok(mode) => mode,
+            Err(err) => {
+                return Err(ServerError::new(format!(
+                    "Failed to parse resolver mode: {}",
+                    err
+                )))
+            }
+        };
+
         return Ok(Self {
             addr_port,
             ancillary_size: 0,
+            resolve_mode,
             network,
             running: false,
         });
@@ -68,7 +89,50 @@ impl Server {
         // Either start the UDP socket or TCP listener
         match self.network {
             Network::Tcp => todo!(),
-            Network::Udp => udp::serve(self.addr_port).await,
+            Network::Udp => self.run_udp().await,
+        }
+    }
+
+    async fn run_udp(&self) -> Result<(), ServerError> {
+        let socket = match net::UdpSocket::bind(self.addr_port).await {
+            Ok(socket) => socket,
+            Err(err) => {
+                return Err(ServerError::new(format!(
+                    "Failed to bind UDP socket: {}",
+                    err
+                )))
+            }
+        };
+
+        let resolver = match Resolver::new_from(self.resolve_mode.clone()).await {
+            Ok(resolver) => resolver,
+            Err(_) => todo!(),
+        };
+
+        let mut data = [0u8; constants::udp::MIN_MESSAGE_SIZE];
+        let resolver = Arc::new(resolver);
+        let socket = Arc::new(socket);
+
+        loop {
+            let (len, addr) = match socket.recv_from(&mut data).await {
+                Ok(result) => result,
+                Err(err) => {
+                    // TODO (Techassi): Log this
+                    println!("{}", err);
+                    continue;
+                }
+            };
+
+            let resolver = resolver.clone();
+
+            let session = udp::Session {
+                socket: socket.clone(),
+                addr,
+            };
+
+            tokio::spawn(async move {
+                udp::handle(data[..len].to_vec(), session, resolver).await;
+            });
         }
     }
 }

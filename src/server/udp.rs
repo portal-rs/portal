@@ -3,45 +3,18 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::net;
 
 use crate::{
-    constants, packing,
-    server::{accept, error::ServerError},
+    packing,
+    resolver::{self, ToResolver},
+    server::accept,
     types::dns::Message,
 };
 
-/// Start the UDP socket listener. This handles imcoming UDP data.
-pub async fn serve(addr_port: SocketAddr) -> Result<(), ServerError> {
-    let socket = match net::UdpSocket::bind(addr_port).await {
-        Ok(socket) => socket,
-        Err(err) => {
-            return Err(ServerError::new(format!(
-                "Failed to bind UDP socket: {}",
-                err
-            )))
-        }
-    };
-
-    let socket = Arc::new(socket);
-    let mut data = [0u8; constants::udp::MIN_MESSAGE_SIZE];
-
-    loop {
-        let (len, addr) = match socket.recv_from(&mut data).await {
-            Ok(result) => result,
-            Err(err) => {
-                // TODO (Techassi): Log this
-                println!("{}", err);
-                continue;
-            }
-        };
-
-        let sender = socket.clone();
-
-        tokio::spawn(async move {
-            handle(data[..len].to_vec(), addr, sender).await;
-        });
-    }
+pub struct Session {
+    pub socket: Arc<net::UdpSocket>,
+    pub addr: SocketAddr,
 }
 
-async fn handle(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
+pub async fn handle(data: Vec<u8>, session: Session, res: Arc<resolver::Resolver>) {
     // Unpack DNS header data
     let (header, offset) = match packing::unpack_header(&data) {
         Ok(result) => result,
@@ -63,8 +36,7 @@ async fn handle(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
                 }
             };
 
-            println!("{:#?}", message);
-            handle_accept(message, addr, socket)
+            handle_accept(message, session, res)
         }
         accept::Action::Reject => todo!(),
         accept::Action::Ignore => todo!(),
@@ -73,6 +45,18 @@ async fn handle(data: Vec<u8>, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
     .await;
 }
 
-async fn handle_accept(message: Message, addr: SocketAddr, socket: Arc<net::UdpSocket>) {
-    println!("{:#?}", message);
+async fn handle_accept(message: Message, session: Session, res: Arc<resolver::Resolver>) {
+    // TODO (Techassi): Lookup in filter engine
+
+    // TODO (Techassi): Lookup in cache
+
+    // TODO (Techassi): Look for custom DNS records
+
+    // Resolve via resolver
+    let records = match res.resolve(&message) {
+        Ok(recs) => recs,
+        Err(_) => todo!(),
+    };
+
+    println!("{:#?} {}", message, records);
 }
