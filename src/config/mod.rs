@@ -96,7 +96,7 @@ impl Default for ResolverOptions {
             upstream: String::from(""),
             max_expire: 300,
             hint_path: String::from(""),
-            mode: String::from(""),
+            mode: String::from("r"),
         };
     }
 }
