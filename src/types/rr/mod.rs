@@ -21,7 +21,7 @@ pub trait Record: ToString {
     fn pack(&self, buf: &Vec<u8>, offset: usize) -> Result<usize, ()>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[enum_dispatch]
 pub enum ResourceRecord {
     A(A),
@@ -37,7 +37,7 @@ pub enum ResourceRecord {
     MX(MX),
     NS(NS),
     NULL(NULL),
-    // OPT(OPT),
+    OPT(OPT),
     PTR(PTR),
     // SOA(SOA),
     TXT(TXT),
@@ -59,6 +59,7 @@ impl ToString for ResourceRecord {
             Self::MX(r) => r.to_string(),
             Self::NS(r) => r.to_string(),
             Self::NULL(r) => r.to_string(),
+            Self::OPT(r) => r.to_string(),
             Self::PTR(r) => r.to_string(),
             Self::TXT(r) => r.to_string(),
         }
@@ -86,7 +87,7 @@ impl From<RRHeader> for ResourceRecord {
             Type::MX => MX::new_with_header(header),
             Type::TXT => TXT::new_with_header(header),
             Type::AAAA => AAAA::new_with_header(header),
-            Type::OPT => todo!(),
+            Type::OPT => OPT::new_with_header(header),
             Type::AXFR => todo!(),
             Type::MAILB => todo!(),
             Type::MAILA => todo!(),
@@ -96,7 +97,7 @@ impl From<RRHeader> for ResourceRecord {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RRHeader {
     pub name: String,
     pub typ: Type,

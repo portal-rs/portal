@@ -1,6 +1,6 @@
 /// [`Class`] describes resource record class codes.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Class {
     /// The Internet
     IN,

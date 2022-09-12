@@ -4,7 +4,7 @@ use crate::{
 };
 
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.3 (EXPERIMENTAL)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MB {
     pub header: RRHeader,
     pub madname: String,

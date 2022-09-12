@@ -6,7 +6,7 @@ use crate::{
 };
 
 /// See https://datatracker.ietf.org/doc/html/rfc3596
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AAAA {
     pub header: RRHeader,
     pub address: Ipv6Addr,

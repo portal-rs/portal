@@ -1,6 +1,6 @@
 /// [`Type`] describes resource record types.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Type {
     NONE,
     /// A host address

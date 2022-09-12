@@ -4,7 +4,7 @@ use super::{Header, Question};
 
 /// [`Message`] describes a complete DNS message describes in RFC 1035
 /// Section 4. See https://datatracker.ietf.org/doc/html/rfc1035#section-4
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Message {
     pub header: Header,
     pub question: Vec<Question>,

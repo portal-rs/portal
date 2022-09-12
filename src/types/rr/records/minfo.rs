@@ -4,7 +4,7 @@ use crate::{
 };
 
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.7 (EXPERIMENTAL)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MINFO {
     pub header: RRHeader,
     pub rmailbox: String,
