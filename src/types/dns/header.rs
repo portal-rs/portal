@@ -1,4 +1,7 @@
-use crate::types::{opcode::Opcode, rcode::Rcode};
+use crate::{
+    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    types::{opcode::Opcode, rcode::Rcode},
+};
 
 /// [`Header`] describes the header data of a message. This header format enables easy access to all header fields. The
 /// [`RawHeader`] in comparison stores raw data directly from the wire.
@@ -47,6 +50,55 @@ impl Default for Header {
             nscount: 0,
             arcount: 0,
         }
+    }
+}
+
+impl Unpackable for Header {
+    /// Unpacks the first 12 octects from the DNS message. The DNS header is
+    /// fixed in size. The function returns the [`Header`] it self and the
+    /// offset (which will always be 12). This function is usually the first
+    /// step in unpacking the whole message.
+    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
+        let id = match buf.read_u16() {
+            Ok(id) => id,
+            Err(err) => return Err(err),
+        };
+
+        let flags = match buf.read_u16() {
+            Ok(flags) => flags,
+            Err(err) => return Err(err),
+        };
+
+        let qdcount = match buf.read_u16() {
+            Ok(qdcount) => qdcount,
+            Err(err) => return Err(err),
+        };
+
+        let ancount = match buf.read_u16() {
+            Ok(ancount) => ancount,
+            Err(err) => return Err(err),
+        };
+
+        let nscount = match buf.read_u16() {
+            Ok(nscount) => nscount,
+            Err(err) => return Err(err),
+        };
+
+        let arcount = match buf.read_u16() {
+            Ok(arcount) => arcount,
+            Err(err) => return Err(err),
+        };
+
+        let header = Header::from(RawHeader {
+            id,
+            flags,
+            qdcount,
+            ancount,
+            nscount,
+            arcount,
+        });
+
+        return Ok(header);
     }
 }
 

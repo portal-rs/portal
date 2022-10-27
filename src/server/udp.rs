@@ -3,10 +3,10 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::net;
 
 use crate::{
-    packing,
+    packing::{self, UnpackBuffer, Unpackable},
     resolver::{self, ToResolver},
     server::accept,
-    types::dns::Message,
+    types::dns::{Header, Message},
 };
 
 pub struct Session {
@@ -14,9 +14,12 @@ pub struct Session {
     pub addr: SocketAddr,
 }
 
-pub async fn handle(data: Vec<u8>, session: Session, res: Arc<resolver::Resolver>) {
+pub async fn handle(buf: &[u8], session: Session, res: Arc<resolver::Resolver>) {
+    // Create an unpack buffer which keeps track of the offset automatically
+    let mut buf = UnpackBuffer::new(buf);
+
     // Unpack DNS header data
-    let (header, offset) = match packing::unpack_header(&data) {
+    let header = match Header::unpack(&mut buf) {
         Ok(result) => result,
         Err(err) => {
             println!("{}", err);
@@ -28,7 +31,7 @@ pub async fn handle(data: Vec<u8>, session: Session, res: Arc<resolver::Resolver
     // at some basic DNS header checks.
     match accept::should_accept(&header).await {
         accept::Action::Accept => {
-            let message = match packing::unpack_message(header, data, offset) {
+            let message = match Message::unpack(&mut buf, header) {
                 Ok(msg) => msg,
                 Err(err) => {
                     println!("{}", err);
