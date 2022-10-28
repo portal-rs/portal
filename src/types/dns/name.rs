@@ -85,10 +85,12 @@ impl Unpackable for Name {
         let mut name = Name::default();
 
         // If we immediatly encounter a null byte, the name is root "."
-        // This can be simplified when if let chains are stabilized:
+        // This can be simplified when if let chains are stabilized. The
+        // current solution is fugly ngl...
         //
         // if let Some(b) = buf.peek() && b == 0 {
         //     buf.pop();
+        //     return Ok(name);
         // }
         match buf.peek() {
             Some(b) if b == 0 => {
@@ -101,7 +103,8 @@ impl Unpackable for Name {
         loop {
             state = match state {
                 NameParseState::LabelLenOrPointer => match buf.peek() {
-                    // We reached the end of the buf, we are done
+                    // We reached the end of the buf or encountered the
+                    // terminating null byte
                     Some(0) | None => NameParseState::Root,
 
                     // We encountered a compression pointer, follow it
