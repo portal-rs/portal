@@ -1,5 +1,5 @@
 /// [`Opcode`] describes the kind of query of the message.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Opcode {
     Query,
     IQuery,
