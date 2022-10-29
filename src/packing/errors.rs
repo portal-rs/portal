@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 pub enum UnpackError {
     InvalidLabelLenOrPointer(u8),
+    InvalidPointerLocation,
     DomainNameLabelTooLong,
     DomainNameTooLong,
     MissingHeader,
@@ -14,6 +15,9 @@ impl Display for UnpackError {
         match self {
             UnpackError::InvalidLabelLenOrPointer(b) => {
                 write!(f, "Invalid domain name label ({})", b)
+            }
+            UnpackError::InvalidPointerLocation => {
+                write!(f, "Invalid compression pointer location")
             }
             UnpackError::DomainNameLabelTooLong => write!(f, "Domain name label too long"),
             UnpackError::DomainNameTooLong => write!(f, "Domain name too long"),

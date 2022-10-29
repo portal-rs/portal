@@ -1,9 +1,7 @@
-mod buffer;
-mod error;
+mod errors;
 mod pack;
 mod unpack;
 
-pub use buffer::*;
-pub use error::*;
+pub use errors::*;
 pub use pack::*;
 pub use unpack::*;
