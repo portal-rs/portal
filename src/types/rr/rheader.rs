@@ -6,30 +6,28 @@ use crate::{
     },
 };
 
-/// [`Question`] describes a DNS question. The RFC allows multiple questions per message, but most DNS servers only
-/// accpet one and multiple questions often result in errors.
-///
-/// ### Further information
-///
-/// See https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.2
 #[derive(Debug)]
-pub struct Question {
+pub struct RHeader {
     pub name: Name,
     pub ty: Type,
     pub class: Class,
+    pub ttl: u32,
+    pub rdlen: u16,
 }
 
-impl Default for Question {
+impl Default for RHeader {
     fn default() -> Self {
         Self {
             name: Default::default(),
-            ty: Type::NONE,
-            class: Class::IN,
+            ty: Default::default(),
+            class: Default::default(),
+            ttl: Default::default(),
+            rdlen: Default::default(),
         }
     }
 }
 
-impl Unpackable for Question {
+impl Unpackable for RHeader {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
         let name = match Name::unpack(buf) {
             Ok(name) => name,
@@ -46,6 +44,22 @@ impl Unpackable for Question {
             Err(err) => return Err(err),
         };
 
-        Ok(Question { name, ty, class })
+        let ttl = match u32::unpack(buf) {
+            Ok(ttl) => ttl,
+            Err(err) => return Err(err),
+        };
+
+        let rdlen = match u16::unpack(buf) {
+            Ok(rdlen) => rdlen,
+            Err(err) => return Err(err),
+        };
+
+        Ok(Self {
+            name,
+            ty,
+            class,
+            ttl,
+            rdlen,
+        })
     }
 }

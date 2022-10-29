@@ -59,32 +59,32 @@ impl Unpackable for Header {
     /// offset (which will always be 12). This function is usually the first
     /// step in unpacking the whole message.
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let id = match buf.read_u16() {
+        let id = match u16::unpack(buf) {
             Ok(id) => id,
             Err(err) => return Err(err),
         };
 
-        let flags = match buf.read_u16() {
+        let flags = match u16::unpack(buf) {
             Ok(flags) => flags,
             Err(err) => return Err(err),
         };
 
-        let qdcount = match buf.read_u16() {
+        let qdcount = match u16::unpack(buf) {
             Ok(qdcount) => qdcount,
             Err(err) => return Err(err),
         };
 
-        let ancount = match buf.read_u16() {
+        let ancount = match u16::unpack(buf) {
             Ok(ancount) => ancount,
             Err(err) => return Err(err),
         };
 
-        let nscount = match buf.read_u16() {
+        let nscount = match u16::unpack(buf) {
             Ok(nscount) => nscount,
             Err(err) => return Err(err),
         };
 
-        let arcount = match buf.read_u16() {
+        let arcount = match u16::unpack(buf) {
             Ok(arcount) => arcount,
             Err(err) => return Err(err),
         };

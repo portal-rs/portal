@@ -1,3 +1,5 @@
+use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+
 /// [`Class`] describes resource record class codes.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
 #[derive(Debug, Clone)]
@@ -20,6 +22,36 @@ pub enum Class {
 
     /// If we receive an invalid RR class, we fallback to this "class" after which we can terminate the connection
     BOGUS,
+}
+
+impl Default for Class {
+    fn default() -> Self {
+        Self::IN
+    }
+}
+
+impl Unpackable for Class {
+    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
+        let class = match u16::unpack(buf) {
+            Ok(class) => class,
+            Err(err) => return Err(err),
+        };
+
+        Ok(Class::from(class))
+    }
+}
+
+impl ToString for Class {
+    fn to_string(&self) -> String {
+        match self {
+            Class::IN => String::from("IN"),
+            Class::CS => String::from("CS"),
+            Class::CH => String::from("CH"),
+            Class::HS => String::from("HS"),
+            Class::ANY => String::from("ANY"),
+            Class::BOGUS => String::from("BOGUS"),
+        }
+    }
 }
 
 impl From<u16> for Class {

@@ -1,34 +1,20 @@
+use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+
 /// [`Type`] describes resource record types.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
 #[derive(Debug, Clone)]
 pub enum Type {
-    NONE,
     /// A host address
     A,
 
     /// An authoritative name server
     NS,
 
-    /// A mail destination (Obsolete - use MX)
-    MD,
-
-    /// A mail forwarder (Obsolete - use MX)
-    MF,
-
     /// The canonical name for an alias
     CNAME,
 
     /// Marks the start of a zone of authority
     SOA,
-
-    /// A mailbox domain name (EXPERIMENTAL)
-    MB,
-
-    /// A mail group member (EXPERIMENTAL)
-    MG,
-
-    /// A mail rename domain name (EXPERIMENTAL)
-    MR,
 
     /// A null RR (EXPERIMENTAL)
     NULL,
@@ -74,19 +60,30 @@ pub enum Type {
     BOGUS,
 }
 
+impl Default for Type {
+    fn default() -> Self {
+        Self::NULL
+    }
+}
+
+impl Unpackable for Type {
+    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
+        let ty = match u16::unpack(buf) {
+            Ok(ty) => ty,
+            Err(err) => return Err(err),
+        };
+
+        Ok(Self::from(ty))
+    }
+}
+
 impl ToString for Type {
     fn to_string(&self) -> String {
         match self {
-            Type::NONE => String::from("NONE"),
             Type::A => String::from("A"),
             Type::NS => String::from("NS"),
-            Type::MD => String::from("MD"),
-            Type::MF => String::from("MF"),
             Type::CNAME => String::from("CNAME"),
             Type::SOA => String::from("SOA"),
-            Type::MB => String::from("MB"),
-            Type::MG => String::from("MG"),
-            Type::MR => String::from("MR"),
             Type::NULL => String::from("NULL"),
             Type::WKS => String::from("WKS"),
             Type::PTR => String::from("PTR"),
@@ -108,16 +105,10 @@ impl ToString for Type {
 impl From<u16> for Type {
     fn from(value: u16) -> Self {
         return match value {
-            0 => Self::NONE,
             1 => Self::A,
             2 => Self::NS,
-            3 => Self::MD,
-            4 => Self::MF,
             5 => Self::CNAME,
             6 => Self::SOA,
-            7 => Self::MB,
-            8 => Self::MG,
-            9 => Self::MR,
             10 => Self::NULL,
             11 => Self::WKS,
             12 => Self::PTR,

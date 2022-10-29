@@ -17,6 +17,7 @@ impl Default for NameParseState {
     }
 }
 
+#[derive(Debug)]
 pub struct Name {
     labels: Vec<Label>,
 }
@@ -27,6 +28,7 @@ impl Default for Name {
     }
 }
 
+#[derive(Debug)]
 pub struct Label(Vec<u8>);
 
 impl From<&[u8]> for Label {
@@ -118,7 +120,7 @@ impl Unpackable for Name {
                     Some(b) => return Err(UnpackError::InvalidLabelLenOrPointer(b)),
                 },
                 NameParseState::Pointer => {
-                    // Read a u16 which starts with 11 (oxC0) and apply the bit
+                    // Read a u16 which starts with 11 (0xC0) and apply the bit
                     // mask to extract the actual compression pointer location
                     let pointer_location = match u16::unpack(buf) {
                         Ok(b) => (b & constants::dns::COMPRESSION_POINTER_MASK) as usize,
@@ -140,7 +142,8 @@ impl Unpackable for Name {
                     // Read the label based on the label length byte. This
                     // returns an error if the label length exceeds the maximum
                     // domain name label length of 63
-                    let label = match buf.read_character_string(constants::dns::MAX_LABEL_LENGTH) {
+                    let label = match buf.unpack_character_string(constants::dns::MAX_LABEL_LENGTH)
+                    {
                         Ok(label) => label,
                         Err(_) => return Err(UnpackError::DomainNameLabelTooLong),
                     };
