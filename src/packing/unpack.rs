@@ -60,6 +60,10 @@ impl<'a> UnpackBuffer<'a> {
         return self.buf.len() - self.rest.len();
     }
 
+    pub fn rest_len(&self) -> usize {
+        return self.rest.len();
+    }
+
     pub fn is_empty(&self) -> bool {
         return self.rest.len() == 0;
     }

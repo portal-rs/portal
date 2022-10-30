@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
     packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
@@ -12,11 +12,15 @@ mod hinfo;
 mod minfo;
 mod mx;
 mod null;
+mod opt;
+mod txt;
 
 use hinfo::*;
 use minfo::*;
 use mx::*;
 use null::*;
+use opt::*;
+use txt::*;
 
 #[derive(Debug)]
 pub enum RData {
@@ -198,8 +202,27 @@ pub enum RData {
     /// [RFC-974].
     /// ```
     MX(MX),
-    TXT,
-    AAAA,
+
+    /// ```text
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// /                   TXT-DATA                    /
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    ///
+    /// where:
+    ///
+    /// TXT-DATA        One or more <character-string>s.
+    ///
+    /// TXT RRs are used to hold descriptive text. The semantics of the text
+    /// depends on the domain where it is found.
+    /// ```
+    TXT(TXT),
+
+    /// The AAAA resource record type is a record specific to the Internet
+    /// class that stores a single IPv6 address.
+    ///
+    /// A 128 bit IPv6 address is encoded in the data portion of an AAAA
+    /// resource record in network byte order (high-order byte first).
+    AAAA(Ipv6Addr),
     OPT,
     AXFR,
     MAILB,
@@ -220,8 +243,8 @@ impl RData {
             Type::HINFO => HINFO::unpack(buf).map(Self::HINFO),
             Type::MINFO => MINFO::unpack(buf).map(Self::MINFO),
             Type::MX => MX::unpack(buf).map(Self::MX),
-            Type::TXT => todo!(),
-            Type::AAAA => todo!(),
+            Type::TXT => TXT::unpack(buf, header.rdlen).map(Self::TXT),
+            Type::AAAA => Ipv6Addr::unpack(buf).map(Self::AAAA),
             Type::OPT => todo!(),
             Type::AXFR => todo!(),
             Type::MAILB => todo!(),
