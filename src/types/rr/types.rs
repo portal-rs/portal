@@ -19,9 +19,6 @@ pub enum Type {
     /// A null RR (EXPERIMENTAL)
     NULL,
 
-    /// A well known service description
-    WKS,
-
     /// A domain name pointer
     PTR,
 
@@ -68,11 +65,7 @@ impl Default for Type {
 
 impl Unpackable for Type {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let ty = match u16::unpack(buf) {
-            Ok(ty) => ty,
-            Err(err) => return Err(err),
-        };
-
+        let ty = u16::unpack(buf)?;
         Ok(Self::from(ty))
     }
 }
@@ -85,7 +78,6 @@ impl ToString for Type {
             Type::CNAME => String::from("CNAME"),
             Type::SOA => String::from("SOA"),
             Type::NULL => String::from("NULL"),
-            Type::WKS => String::from("WKS"),
             Type::PTR => String::from("PTR"),
             Type::HINFO => String::from("HINFO"),
             Type::MINFO => String::from("MINFO"),
@@ -110,7 +102,6 @@ impl From<u16> for Type {
             5 => Self::CNAME,
             6 => Self::SOA,
             10 => Self::NULL,
-            11 => Self::WKS,
             12 => Self::PTR,
             13 => Self::HINFO,
             14 => Self::MINFO,

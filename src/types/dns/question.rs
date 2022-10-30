@@ -19,32 +19,11 @@ pub struct Question {
     pub class: Class,
 }
 
-impl Default for Question {
-    fn default() -> Self {
-        Self {
-            name: Default::default(),
-            ty: Type::NONE,
-            class: Class::IN,
-        }
-    }
-}
-
 impl Unpackable for Question {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let name = match Name::unpack(buf) {
-            Ok(name) => name,
-            Err(err) => return Err(err),
-        };
-
-        let ty = match Type::unpack(buf) {
-            Ok(ty) => ty,
-            Err(err) => return Err(err),
-        };
-
-        let class = match Class::unpack(buf) {
-            Ok(class) => class,
-            Err(err) => return Err(err),
-        };
+        let name = Name::unpack(buf)?;
+        let ty = Type::unpack(buf)?;
+        let class = Class::unpack(buf)?;
 
         Ok(Question { name, ty, class })
     }

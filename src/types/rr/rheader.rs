@@ -29,30 +29,11 @@ impl Default for RHeader {
 
 impl Unpackable for RHeader {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let name = match Name::unpack(buf) {
-            Ok(name) => name,
-            Err(err) => return Err(err),
-        };
-
-        let ty = match Type::unpack(buf) {
-            Ok(ty) => ty,
-            Err(err) => return Err(err),
-        };
-
-        let class = match Class::unpack(buf) {
-            Ok(class) => class,
-            Err(err) => return Err(err),
-        };
-
-        let ttl = match u32::unpack(buf) {
-            Ok(ttl) => ttl,
-            Err(err) => return Err(err),
-        };
-
-        let rdlen = match u16::unpack(buf) {
-            Ok(rdlen) => rdlen,
-            Err(err) => return Err(err),
-        };
+        let name = Name::unpack(buf)?;
+        let ty = Type::unpack(buf)?;
+        let class = Class::unpack(buf)?;
+        let ttl = u32::unpack(buf)?;
+        let rdlen = u16::unpack(buf)?;
 
         Ok(Self {
             name,
