@@ -1,3 +1,4 @@
 pub const COMPRESSION_POINTER_MASK: u16 = 0x3FFF;
+pub const MAX_CHAR_STRING_LENGTH: u8 = 255;
 pub const MAX_DOMAIN_LENGTH: u8 = 255;
 pub const MAX_LABEL_LENGTH: u8 = 0x3F;
