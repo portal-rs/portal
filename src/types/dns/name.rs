@@ -17,7 +17,7 @@ impl Default for NameParseState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Name {
     labels: Vec<Label>,
 }
@@ -188,7 +188,7 @@ impl Name {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Label(Vec<u8>);
 
 impl From<&[u8]> for Label {

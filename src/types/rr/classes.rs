@@ -2,7 +2,7 @@ use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
 
 /// [`Class`] describes resource record class codes.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Class {
     /// The Internet
     IN,
@@ -20,8 +20,11 @@ pub enum Class {
     /// Any class (*)
     ANY,
 
-    /// If we receive an invalid RR class, we fallback to this "class" after which we can terminate the connection
-    BOGUS,
+    /// If we receive an unknown RR class, we default back to this "class".
+    /// This can be the case when wie deal with OPT records. ENDS uses this
+    /// field to indicate the sender's UDP payload size instead of the class.
+    /// To be able to use the value, we add the `u16` to this variant.
+    UNKNOWN(u16),
 }
 
 impl Default for Class {
@@ -49,7 +52,7 @@ impl ToString for Class {
             Class::CH => String::from("CH"),
             Class::HS => String::from("HS"),
             Class::ANY => String::from("ANY"),
-            Class::BOGUS => String::from("BOGUS"),
+            Class::UNKNOWN(c) => format!("UNKNOWN({})", c),
         }
     }
 }
@@ -62,7 +65,20 @@ impl From<u16> for Class {
             3 => Self::CH,
             4 => Self::HS,
             255 => Self::ANY,
-            _ => Self::BOGUS,
+            _ => Self::UNKNOWN(value),
         };
+    }
+}
+
+impl Into<u16> for Class {
+    fn into(self) -> u16 {
+        match self {
+            Class::IN => 1,
+            Class::CS => 2,
+            Class::CH => 3,
+            Class::HS => 4,
+            Class::ANY => 255,
+            Class::UNKNOWN(v) => v,
+        }
     }
 }

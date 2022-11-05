@@ -1,0 +1,105 @@
+use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+
+/// DNS EDNS0 Option Codes (OPT)
+///
+/// ### See
+/// - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-11
+/// - https://datatracker.ietf.org/doc/html/rfc6891
+#[derive(Debug)]
+pub enum OptionCode {
+    /// 0, 4 and 65535 are reserved
+    RESERVED,
+
+    /// 65001-65534 reserved for local/experimental use
+    RESERVEDLOCAL,
+
+    /// Unassigned
+    /// - 18 - 20291
+    /// - 20293 - 26945
+    /// - 26947 - 65000
+    UNASSIGNED,
+
+    /// Long-Lived Queries
+    /// [[RFC 8764](https://datatracker.ietf.org/doc/html/rfc8764)]
+    LLQ,
+
+    /// Update Leases (Draft)
+    UL,
+
+    /// Name Server Identifier
+    /// [[RFC 5001](https://datatracker.ietf.org/doc/html/rfc5001)]
+    NSID,
+
+    /// DNSSEC Algorithm Understood (DAU)
+    /// [[RFC 6975](https://datatracker.ietf.org/doc/html/rfc6975#section-3)]
+    DAU,
+
+    /// DS Hash Understood (DHU)
+    /// [[RFC 6975](https://datatracker.ietf.org/doc/html/rfc6975#section-3)]
+    DHU,
+
+    /// NSEC3 Hash Understood (N3U)
+    /// [[RFC 6975](https://datatracker.ietf.org/doc/html/rfc6975#section-3)]
+    N3U,
+
+    /// Client Subnet in DNS Queries
+    /// [[RFC 7871](https://datatracker.ietf.org/doc/html/rfc7871)]
+    ECS,
+    EXPIRE,
+
+    /// Domain Name System (DNS) Cookies
+    /// [[RFC 7873](https://datatracker.ietf.org/doc/html/rfc7873)]
+    COOKIE,
+
+    /// The edns-tcp-keepalive EDNS0 Option
+    /// [[RFC 7828](https://datatracker.ietf.org/doc/html/rfc7828)]
+    TCPKEEPALIVE,
+
+    /// The EDNS(0) Padding Option
+    /// [[RFC 7830](https://datatracker.ietf.org/doc/html/rfc7830)]
+    PADDING,
+
+    ///
+    CHAIN,
+    KEYTAG,
+    EDE,
+    CLIENTTAG,
+    SERVERTAG,
+    UMBRELLAIDENT,
+    DEVICEID,
+}
+
+impl Unpackable for OptionCode {
+    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
+        let code = u16::unpack(buf)?;
+        Ok(OptionCode::from(code))
+    }
+}
+
+impl From<u16> for OptionCode {
+    fn from(value: u16) -> Self {
+        match value {
+            1 => OptionCode::LLQ,
+            2 => OptionCode::UL,
+            3 => OptionCode::NSID,
+            5 => OptionCode::DAU,
+            6 => OptionCode::DHU,
+            7 => OptionCode::N3U,
+            8 => OptionCode::ECS,
+            9 => OptionCode::EXPIRE,
+            10 => OptionCode::COOKIE,
+            11 => OptionCode::TCPKEEPALIVE,
+            12 => OptionCode::PADDING,
+            13 => OptionCode::CHAIN,
+            14 => OptionCode::KEYTAG,
+            15 => OptionCode::EDE,
+            16 => OptionCode::CLIENTTAG,
+            17 => OptionCode::SERVERTAG,
+            20292 => OptionCode::UMBRELLAIDENT,
+            26946 => OptionCode::DEVICEID,
+            0 | 4 | u16::MAX => OptionCode::RESERVED,
+            65001..=65534 => OptionCode::RESERVEDLOCAL,
+            _ => Self::UNASSIGNED,
+        }
+    }
+}

@@ -223,7 +223,7 @@ pub enum RData {
     /// A 128 bit IPv6 address is encoded in the data portion of an AAAA
     /// resource record in network byte order (high-order byte first).
     AAAA(Ipv6Addr),
-    OPT,
+    OPT(OPT),
     AXFR,
     MAILB,
     MAILA,
@@ -251,7 +251,7 @@ impl ToString for RData {
             RData::MX(_) => todo!(),
             RData::TXT(_) => todo!(),
             RData::AAAA(_) => todo!(),
-            RData::OPT => todo!(),
+            RData::OPT(_) => todo!(),
             RData::AXFR => todo!(),
             RData::MAILB => todo!(),
             RData::MAILA => todo!(),
@@ -275,7 +275,7 @@ impl RData {
             Type::MX => MX::unpack(buf).map(Self::MX),
             Type::TXT => TXT::unpack(buf, header.rdlen).map(Self::TXT),
             Type::AAAA => Ipv6Addr::unpack(buf).map(Self::AAAA),
-            Type::OPT => todo!(),
+            Type::OPT => OPT::unpack(buf, header).map(Self::OPT),
             Type::AXFR => todo!(),
             Type::MAILB => todo!(),
             Type::MAILA => todo!(),
