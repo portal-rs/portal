@@ -109,12 +109,12 @@ impl Server {
             Err(_) => todo!(),
         };
 
-        let mut data = [0u8; constants::udp::MIN_MESSAGE_SIZE];
         let resolver = Arc::new(resolver);
         let socket = Arc::new(socket);
 
         loop {
-            let (len, addr) = match socket.recv_from(&mut data).await {
+            let mut buf = vec![0u8; constants::udp::MIN_MESSAGE_SIZE];
+            let (len, addr) = match socket.recv_from(&mut buf).await {
                 Ok(result) => result,
                 Err(err) => {
                     // TODO (Techassi): Log this
@@ -122,6 +122,7 @@ impl Server {
                     continue;
                 }
             };
+            buf.shrink_to(len);
 
             let resolver = resolver.clone();
 
@@ -131,7 +132,7 @@ impl Server {
             };
 
             tokio::spawn(async move {
-                udp::handle(data[..len].to_vec(), session, resolver).await;
+                udp::handle(buf.as_slice(), session, resolver).await;
             });
         }
     }
