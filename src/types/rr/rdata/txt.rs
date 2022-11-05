@@ -12,7 +12,7 @@ impl TXT {
     pub fn unpack(buf: &mut UnpackBuffer, rdlen: u16) -> UnpackBufferResult<Self> {
         let start_len = buf.rest_len();
         let rdlen = rdlen as usize;
-        let data = Vec::new();
+        let mut data = Vec::new();
 
         while start_len - buf.rest_len() < rdlen {
             let char_string =

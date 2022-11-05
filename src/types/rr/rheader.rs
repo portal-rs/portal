@@ -27,6 +27,19 @@ impl Default for RHeader {
     }
 }
 
+impl ToString for RHeader {
+    fn to_string(&self) -> String {
+        format!(
+            "N: {} T: {} C: {} TTL: {} ({})",
+            self.name.to_string(),
+            self.ty.to_string(),
+            self.class.to_string(),
+            self.ttl,
+            self.rdlen
+        )
+    }
+}
+
 impl Unpackable for RHeader {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
         let name = Name::unpack(buf)?;

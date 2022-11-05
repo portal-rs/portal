@@ -28,56 +28,9 @@ impl Default for Name {
     }
 }
 
-#[derive(Debug)]
-pub struct Label(Vec<u8>);
-
-impl From<&[u8]> for Label {
-    fn from(bytes: &[u8]) -> Self {
-        Self(bytes.to_vec())
-    }
-}
-
-impl Name {
-    /// Return the indiviual labels of the domain name.
-    ///
-    /// ### Example
-    ///
-    /// ```
-    /// use crate::types::dns::Name;
-    ///
-    /// let n = Name::from("example.com");
-    /// assert_eq!(n, vec![])
-    /// ```
-    pub fn iter(&self) -> Vec<Label> {
-        return self.labels;
-    }
-
-    pub fn add_label(&mut self, label: Label) -> Result<(), ProtocolError> {
-        if self.len() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
-            return Err(ProtocolError::DomainNameTooLong);
-        }
-
-        self.labels.push(label);
-        Ok(())
-    }
-
-    /// Return the number of labels without the root "." label.
-    pub fn num_labels(&self) -> usize {
-        return self.labels.len();
-    }
-
-    /// Return the number of labels with the root "." label.
-    pub fn num_labels_root(&self) -> usize {
-        return self.labels.len() + 1;
-    }
-
-    pub fn len(&self) -> usize {
-        let dots = self.labels.len();
-
-        let labels = 0;
-        self.labels.iter().for_each(|l| labels += l.0.len());
-
-        return dots + labels;
+impl ToString for Name {
+    fn to_string(&self) -> String {
+        return self.to_dotted_string();
     }
 }
 
@@ -177,5 +130,78 @@ impl Unpackable for Name {
         }
 
         Ok(name)
+    }
+}
+
+impl Name {
+    /// Return the indiviual labels of the domain name.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use crate::types::dns::Name;
+    ///
+    /// let n = Name::from("example.com");
+    /// assert_eq!(n, vec![])
+    /// ```
+    // pub fn iter(&self) -> Vec<Label> {
+    //     return self.labels;
+    // }
+
+    pub fn add_label(&mut self, label: Label) -> Result<(), ProtocolError> {
+        if self.len() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
+            return Err(ProtocolError::DomainNameTooLong);
+        }
+
+        self.labels.push(label);
+        Ok(())
+    }
+
+    /// Return the number of labels without the root "." label.
+    pub fn num_labels(&self) -> usize {
+        return self.labels.len();
+    }
+
+    /// Return the number of labels with the root "." label.
+    pub fn num_labels_root(&self) -> usize {
+        return self.labels.len() + 1;
+    }
+
+    pub fn len(&self) -> usize {
+        let dots = self.labels.len();
+
+        let mut labels = 0;
+        self.labels.iter().for_each(|l| labels += l.0.len());
+
+        return dots + labels;
+    }
+
+    pub fn to_dotted_string(&self) -> String {
+        self.labels
+            .iter()
+            .map(|l| {
+                let mut label = l.to_string();
+                label.push('.');
+                label
+            })
+            .collect()
+    }
+}
+
+#[derive(Debug)]
+pub struct Label(Vec<u8>);
+
+impl From<&[u8]> for Label {
+    fn from(bytes: &[u8]) -> Self {
+        Self(bytes.to_vec())
+    }
+}
+
+impl ToString for Label {
+    fn to_string(&self) -> String {
+        match String::from_utf8(self.0.clone()) {
+            Ok(s) => s,
+            Err(_) => String::new(),
+        }
     }
 }

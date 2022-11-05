@@ -231,8 +231,38 @@ pub enum RData {
     BOGUS,
 }
 
+impl Default for RData {
+    fn default() -> Self {
+        Self::NULL(NULL::new())
+    }
+}
+
+impl ToString for RData {
+    fn to_string(&self) -> String {
+        match self {
+            RData::A(ipv4) => ipv4.to_string(),
+            RData::NS(name) => name.to_string(),
+            RData::CNAME(name) => name.to_string(),
+            RData::SOA => todo!(),
+            RData::NULL(_) => todo!(),
+            RData::PTR(_) => todo!(),
+            RData::HINFO(_) => todo!(),
+            RData::MINFO(_) => todo!(),
+            RData::MX(_) => todo!(),
+            RData::TXT(_) => todo!(),
+            RData::AAAA(_) => todo!(),
+            RData::OPT => todo!(),
+            RData::AXFR => todo!(),
+            RData::MAILB => todo!(),
+            RData::MAILA => todo!(),
+            RData::ANY => todo!(),
+            RData::BOGUS => todo!(),
+        }
+    }
+}
+
 impl RData {
-    pub fn unpack(buf: &mut UnpackBuffer, header: RHeader) -> UnpackBufferResult<Self> {
+    pub fn unpack(buf: &mut UnpackBuffer, header: &RHeader) -> UnpackBufferResult<Self> {
         let result = match header.ty {
             Type::A => Ipv4Addr::unpack(buf).map(Self::A),
             Type::NS => Name::unpack(buf).map(Self::NS),
@@ -258,14 +288,8 @@ impl RData {
             Err(err) => return Err(err),
         };
 
-        // Check header rdlen against real len
+        // TODO (Techassi): Check header rdlen against real len
 
         Ok(rdata)
-    }
-}
-
-impl Default for RData {
-    fn default() -> Self {
-        Self::NULL(NULL::new())
     }
 }

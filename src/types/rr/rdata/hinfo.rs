@@ -1,4 +1,7 @@
-use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+use crate::{
+    constants,
+    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+};
 
 #[derive(Debug)]
 pub struct HINFO {
@@ -8,8 +11,12 @@ pub struct HINFO {
 
 impl Unpackable for HINFO {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let cpu = buf.unpack_character_string(255)?.to_vec();
-        let os = buf.unpack_character_string(255)?.to_vec();
+        let cpu = buf
+            .unpack_character_string(constants::dns::MAX_CHAR_STRING_LENGTH)?
+            .to_vec();
+        let os = buf
+            .unpack_character_string(constants::dns::MAX_CHAR_STRING_LENGTH)?
+            .to_vec();
 
         Ok(Self { cpu, os })
     }
