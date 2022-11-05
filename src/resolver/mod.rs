@@ -2,7 +2,7 @@ use std::fmt;
 
 use enum_dispatch::enum_dispatch;
 
-use crate::types::{dns::Message, rr::ResourceRecord};
+use crate::types::{dns::Message, rr::Record};
 
 mod error;
 mod forwarding;
@@ -19,9 +19,9 @@ pub use recursive::*;
 pub type ResolveResult = Result<ResultRecords, ResolveError>;
 
 pub struct ResultRecords {
-    answer: Vec<ResourceRecord>,
-    authority: Vec<ResourceRecord>,
-    additional: Vec<ResourceRecord>,
+    answer: Vec<Record>,
+    authority: Vec<Record>,
+    additional: Vec<Record>,
 }
 
 impl fmt::Display for ResultRecords {
