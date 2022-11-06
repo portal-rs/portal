@@ -1,5 +1,7 @@
 use crate::types::{dns::Name, rr::RHeader};
 
+/// The [`EdnsHeader`] describes the adjustments of the RR header defined in
+/// section 4 of [RFC 2671](https://datatracker.ietf.org/doc/html/rfc2671#section-4).
 #[derive(Debug)]
 pub struct EdnsHeader {
     /// This will always be empty (root).
