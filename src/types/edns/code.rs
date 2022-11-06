@@ -5,7 +5,7 @@ use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
 /// ### See
 /// - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-11
 /// - https://datatracker.ietf.org/doc/html/rfc6891
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum OptionCode {
     /// 0, 4 and 65535 are reserved
     RESERVED,
