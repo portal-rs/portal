@@ -4,7 +4,7 @@
 ///
 /// Response code - this 4 bit field is set as part of responses.
 /// See [RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Rcode {
     /// (0) No error condition.
     NoError,
@@ -64,5 +64,19 @@ impl From<u16> for Rcode {
             5 => Self::Refused,
             _ => Self::Reserved,
         };
+    }
+}
+
+impl Into<u16> for Rcode {
+    fn into(self) -> u16 {
+        match self {
+            Rcode::NoError => 0,
+            Rcode::FormatError => 1,
+            Rcode::ServerFailure => 2,
+            Rcode::NameError => 3,
+            Rcode::NotImpl => 4,
+            Rcode::Refused => 5,
+            Rcode::Reserved => 65535,
+        }
     }
 }

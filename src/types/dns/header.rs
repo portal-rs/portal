@@ -1,12 +1,14 @@
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
     types::{opcode::Opcode, rcode::Rcode},
 };
 
 /// [`Header`] describes the header data of a message. This header format enables easy access to all header fields. The
 /// [`RawHeader`] in comparison stores raw data directly from the wire.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Header {
     pub id: u16,
     pub is_query: bool,
@@ -59,35 +61,12 @@ impl Unpackable for Header {
     /// offset (which will always be 12). This function is usually the first
     /// step in unpacking the whole message.
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let id = match u16::unpack(buf) {
-            Ok(id) => id,
-            Err(err) => return Err(err),
-        };
-
-        let flags = match u16::unpack(buf) {
-            Ok(flags) => flags,
-            Err(err) => return Err(err),
-        };
-
-        let qdcount = match u16::unpack(buf) {
-            Ok(qdcount) => qdcount,
-            Err(err) => return Err(err),
-        };
-
-        let ancount = match u16::unpack(buf) {
-            Ok(ancount) => ancount,
-            Err(err) => return Err(err),
-        };
-
-        let nscount = match u16::unpack(buf) {
-            Ok(nscount) => nscount,
-            Err(err) => return Err(err),
-        };
-
-        let arcount = match u16::unpack(buf) {
-            Ok(arcount) => arcount,
-            Err(err) => return Err(err),
-        };
+        let id = u16::unpack(buf)?;
+        let flags = u16::unpack(buf)?;
+        let qdcount = u16::unpack(buf)?;
+        let ancount = u16::unpack(buf)?;
+        let nscount = u16::unpack(buf)?;
+        let arcount = u16::unpack(buf)?;
 
         let header = Header::from(RawHeader {
             id,
@@ -99,6 +78,15 @@ impl Unpackable for Header {
         });
 
         return Ok(header);
+    }
+}
+
+impl Packable for Header {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        let raw_header = RawHeader::from(self);
+        raw_header.pack(buf)?;
+
+        Ok(())
     }
 }
 
@@ -133,6 +121,61 @@ pub struct RawHeader {
     pub ancount: u16,
     pub nscount: u16,
     pub arcount: u16,
+}
+
+impl Packable for RawHeader {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        self.id.pack(buf)?;
+        self.flags.pack(buf)?;
+        self.qdcount.pack(buf)?;
+        self.ancount.pack(buf)?;
+        self.nscount.pack(buf)?;
+        self.arcount.pack(buf)?;
+
+        Ok(())
+    }
+}
+
+impl From<&Header> for RawHeader {
+    fn from(header: &Header) -> Self {
+        // Start to build flags by appending the OPCODE and RCODE
+        let opcode: u16 = header.opcode.into();
+        let rcode: u16 = header.rcode.into();
+        let mut flags = opcode << 11 | rcode & 0xF;
+
+        if !header.is_query {
+            flags |= 1 << 15;
+        }
+
+        if header.authoritative {
+            flags |= 1 << 10;
+        }
+
+        if header.truncated {
+            flags |= 1 << 9;
+        }
+
+        if header.rec_des {
+            flags |= 1 << 8;
+        }
+
+        if header.rec_avail {
+            flags |= 1 << 7;
+        }
+
+        if header.zero {
+            flags |= 1 << 6;
+        }
+
+        Self {
+            id: header.id,
+            flags: flags,
+            qdcount: header.qdcount,
+            ancount: header.ancount,
+            nscount: header.nscount,
+            arcount: header.arcount,
+        }
+    }
 }
 
 impl RawHeader {

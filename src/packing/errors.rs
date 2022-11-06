@@ -27,3 +27,7 @@ impl Display for UnpackError {
         }
     }
 }
+
+pub enum PackError {
+    TooShort,
+}

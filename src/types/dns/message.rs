@@ -1,6 +1,13 @@
+use std::ops::Deref;
+
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
-    types::rr::Record,
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
+    types::{
+        dns::{message, RawHeader},
+        rr::Record,
+    },
 };
 
 use super::{Header, Question};
@@ -25,6 +32,14 @@ impl Default for Message {
             authority: Vec::new(),
             additional: Vec::new(),
         }
+    }
+}
+
+impl Packable for Message {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        self.header.pack(buf)?;
+
+        Ok(())
     }
 }
 
