@@ -10,11 +10,11 @@ pub struct TXT {
 
 impl TXT {
     pub fn unpack(buf: &mut UnpackBuffer, rdlen: u16) -> UnpackBufferResult<Self> {
-        let start_len = buf.rest_len();
+        let start_len = buf.len();
         let rdlen = rdlen as usize;
         let mut data = Vec::new();
 
-        while start_len - buf.rest_len() < rdlen {
+        while start_len - buf.len() < rdlen {
             let char_string =
                 buf.unpack_character_string(constants::dns::MAX_CHAR_STRING_LENGTH)?;
             data.push(char_string.to_vec());

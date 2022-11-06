@@ -60,7 +60,7 @@ impl<'a> UnpackBuffer<'a> {
         return self.buf.len() - self.rest.len();
     }
 
-    pub fn rest_len(&self) -> usize {
+    pub fn len(&self) -> usize {
         return self.rest.len();
     }
 
