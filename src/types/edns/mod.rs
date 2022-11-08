@@ -1,4 +1,6 @@
-use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+use crate::packing::{
+    PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+};
 
 mod code;
 mod data;
@@ -23,6 +25,14 @@ impl Unpackable for Option {
         let data = OptionData::unpack(buf, code, len)?;
 
         Ok(Option { code, data, len })
+    }
+}
+
+impl Packable for Option {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        self.code.pack(buf)?;
+        self.len.pack(buf)?;
+        self.data.pack(buf)
     }
 }
 

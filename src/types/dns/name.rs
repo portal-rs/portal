@@ -1,7 +1,10 @@
 use crate::{
     constants,
     errors::ProtocolError,
-    packing::{UnpackBuffer, UnpackBufferResult, UnpackError, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, PackingError, UnpackBuffer, UnpackBufferResult,
+        Unpackable,
+    },
 };
 
 enum NameParseState {
@@ -49,7 +52,7 @@ impl Unpackable for Name {
         // }
         match buf.peek() {
             Some(b) if b == 0 => {
-                buf.pop();
+                buf.pop()?;
                 return Ok(name);
             }
             _ => {}
@@ -70,7 +73,7 @@ impl Unpackable for Name {
                     Some(b) if b & 0xC0 == 0x0 => NameParseState::Label,
 
                     // A byte which shouldn't be here
-                    Some(b) => return Err(UnpackError::InvalidLabelLenOrPointer(b)),
+                    Some(b) => return Err(PackingError::InvalidLabelLenOrPointer(b)),
                 },
                 NameParseState::Pointer => {
                     // Read a u16 which starts with 11 (0xC0) and apply the bit
@@ -83,12 +86,12 @@ impl Unpackable for Name {
                     // Ensure we jump to a location which comes before the
                     // current offset
                     if pointer_location > buf.offset() {
-                        return Err(UnpackError::InvalidPointerLocation);
+                        return Err(PackingError::InvalidPointerLocation);
                     }
 
                     // Jump to the pointer location by updating the underlying
                     // buffer
-                    buf.jump_to(pointer_location);
+                    buf.jump_to(pointer_location)?;
                     NameParseState::LabelLenOrPointer
                 }
                 NameParseState::Label => {
@@ -98,14 +101,14 @@ impl Unpackable for Name {
                     let label = match buf.unpack_character_string(constants::dns::MAX_LABEL_LENGTH)
                     {
                         Ok(label) => label,
-                        Err(_) => return Err(UnpackError::DomainNameLabelTooLong),
+                        Err(_) => return Err(PackingError::DomainNameLabelTooLong),
                     };
 
                     // Add the label to the domain name. This returns an error
                     // if the domain name length exceeds the maximum domain
                     // name length of 255
                     if let Err(err) = name.add_label(label.into()) {
-                        return Err(UnpackError::DomainNameTooLong);
+                        return Err(PackingError::DomainNameTooLong);
                     }
 
                     NameParseState::LabelLenOrPointer
@@ -123,7 +126,7 @@ impl Unpackable for Name {
 
                     // We reached the terminating null byte. Remove it from
                     // the buffer and break out of the loop
-                    buf.pop();
+                    buf.pop()?;
                     break;
                 }
             }
@@ -133,20 +136,39 @@ impl Unpackable for Name {
     }
 }
 
+impl Packable for Name {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        let buffer_len_start = buf.len();
+
+        // TODO (Techassi): This does NOT handle compression. Add it
+        for label in self.iter() {
+            if label.len() > constants::dns::MAX_LABEL_LENGTH.into() {
+                return Err(PackingError::DomainNameLabelTooLong);
+            }
+
+            buf.push(label.len() as u8);
+            buf.pack_vec(&mut label.bytes())?;
+        }
+
+        // Terminating null byte
+        buf.push(0);
+
+        if buf.len() - buffer_len_start > constants::dns::MAX_DOMAIN_LENGTH.into() {
+            return Err(PackingError::DomainNameTooLong);
+        }
+
+        Ok(())
+    }
+}
+
 impl Name {
-    /// Return the indiviual labels of the domain name.
-    ///
-    /// ### Example
-    ///
-    /// ```
-    /// use crate::types::dns::Name;
-    ///
-    /// let n = Name::from("example.com");
-    /// assert_eq!(n, vec![])
-    /// ```
-    // pub fn iter(&self) -> Vec<Label> {
-    //     return self.labels;
-    // }
+    /// Return an [`Iterator`] over the labels in the domain name.
+    pub fn iter(&self) -> NameIterator<'_> {
+        NameIterator {
+            name: self,
+            index: 0,
+        }
+    }
 
     pub fn add_label(&mut self, label: Label) -> Result<(), ProtocolError> {
         if self.len() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
@@ -188,6 +210,28 @@ impl Name {
     }
 }
 
+pub struct NameIterator<'a> {
+    name: &'a Name,
+    index: usize,
+}
+
+impl<'a> Iterator for NameIterator<'a> {
+    type Item = &'a Label;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.name.len() {
+            return None;
+        }
+
+        let current_label = self.name.labels.get(self.index);
+        self.index += 1;
+
+        return current_label;
+    }
+}
+
+impl<'a> ExactSizeIterator for NameIterator<'a> {}
+
 #[derive(Debug, Clone)]
 pub struct Label(Vec<u8>);
 
@@ -203,5 +247,17 @@ impl ToString for Label {
             Ok(s) => s,
             Err(_) => String::new(),
         }
+    }
+}
+
+impl Label {
+    // TODO (Techassi): This idealy should not clone, but we need to introduce
+    // lifetimes across Label, Name and types using Name, e.g. Question
+    pub fn bytes(&self) -> Vec<u8> {
+        return self.0.clone();
+    }
+
+    pub fn len(&self) -> usize {
+        return self.0.len();
     }
 }

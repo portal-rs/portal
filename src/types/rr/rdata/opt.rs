@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
     types::{
         edns::{EdnsHeader, Option, OptionCode},
         rr::RHeader,
@@ -31,5 +33,15 @@ impl OPT {
         }
 
         Ok(Self { header, options })
+    }
+}
+
+impl Packable for OPT {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        for (_, option) in &self.options {
+            option.pack(buf)?;
+        }
+
+        Ok(())
     }
 }

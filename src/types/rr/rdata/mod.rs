@@ -1,7 +1,9 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
     types::{
         dns::Name,
         rr::{RHeader, Type},
@@ -261,6 +263,30 @@ impl ToString for RData {
     }
 }
 
+impl Packable for RData {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        match self {
+            RData::A(_) => todo!(),
+            RData::NS(_) => todo!(),
+            RData::CNAME(_) => todo!(),
+            RData::SOA => todo!(),
+            RData::NULL(_) => todo!(),
+            RData::PTR(_) => todo!(),
+            RData::HINFO(_) => todo!(),
+            RData::MINFO(_) => todo!(),
+            RData::MX(_) => todo!(),
+            RData::TXT(_) => todo!(),
+            RData::AAAA(_) => todo!(),
+            RData::OPT(opt) => opt.pack(buf),
+            RData::AXFR => todo!(),
+            RData::MAILB => todo!(),
+            RData::MAILA => todo!(),
+            RData::ANY => todo!(),
+            RData::BOGUS => todo!(),
+        }
+    }
+}
+
 impl RData {
     pub fn unpack(buf: &mut UnpackBuffer, header: &RHeader) -> UnpackBufferResult<Self> {
         let result = match header.ty {
@@ -280,7 +306,7 @@ impl RData {
             Type::MAILB => todo!(),
             Type::MAILA => todo!(),
             Type::ANY => todo!(),
-            Type::BOGUS => todo!(),
+            Type::UNKNOWN(_) => todo!(),
         };
 
         let rdata = match result {

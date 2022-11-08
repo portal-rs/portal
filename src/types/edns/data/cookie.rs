@@ -1,7 +1,4 @@
-use crate::{
-    client,
-    packing::{UnpackBuffer, UnpackBufferResult},
-};
+use crate::packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult};
 
 #[derive(Debug)]
 pub struct COOKIE {
@@ -30,5 +27,17 @@ impl COOKIE {
             client,
             server: Some(server),
         })
+    }
+}
+
+impl Packable for COOKIE {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        buf.pack_vec(&mut self.client.clone())?;
+
+        if let Some(server) = &self.server {
+            buf.pack_vec(&mut server.clone())?;
+        }
+
+        Ok(())
     }
 }

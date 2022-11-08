@@ -1,5 +1,7 @@
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
     types::{
         dns::Name,
         rr::{Class, Type},
@@ -26,5 +28,15 @@ impl Unpackable for Question {
         let class = Class::unpack(buf)?;
 
         Ok(Question { name, ty, class })
+    }
+}
+
+impl Packable for Question {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        self.name.pack(buf)?;
+        self.ty.pack(buf)?;
+        self.class.pack(buf)?;
+
+        Ok(())
     }
 }

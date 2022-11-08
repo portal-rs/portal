@@ -1,4 +1,6 @@
-use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+use crate::packing::{
+    PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+};
 
 /// DNS EDNS0 Option Codes (OPT)
 ///
@@ -8,10 +10,10 @@ use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum OptionCode {
     /// 0, 4 and 65535 are reserved
-    RESERVED,
+    RESERVED(u16),
 
     /// 65001-65534 reserved for local/experimental use
-    RESERVEDLOCAL,
+    RESERVEDLOCAL(u16),
 
     /// Unassigned
     /// - 18 - 20291
@@ -76,6 +78,13 @@ impl Unpackable for OptionCode {
     }
 }
 
+impl Packable for OptionCode {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        let code: u16 = self.into();
+        code.pack(buf)
+    }
+}
+
 impl From<u16> for OptionCode {
     fn from(value: u16) -> Self {
         match value {
@@ -97,9 +106,43 @@ impl From<u16> for OptionCode {
             17 => OptionCode::SERVERTAG,
             20292 => OptionCode::UMBRELLAIDENT,
             26946 => OptionCode::DEVICEID,
-            0 | 4 | u16::MAX => OptionCode::RESERVED,
-            65001..=65534 => OptionCode::RESERVEDLOCAL,
+            0 | 4 | u16::MAX => OptionCode::RESERVED(value),
+            65001..=65534 => OptionCode::RESERVEDLOCAL(value),
             _ => Self::UNASSIGNED,
         }
+    }
+}
+
+impl Into<u16> for OptionCode {
+    fn into(self) -> u16 {
+        match self {
+            OptionCode::RESERVED(_) => todo!(),
+            OptionCode::RESERVEDLOCAL(_) => todo!(),
+            OptionCode::UNASSIGNED => todo!(),
+            OptionCode::LLQ => todo!(),
+            OptionCode::UL => todo!(),
+            OptionCode::NSID => todo!(),
+            OptionCode::DAU => todo!(),
+            OptionCode::DHU => todo!(),
+            OptionCode::N3U => todo!(),
+            OptionCode::ECS => todo!(),
+            OptionCode::EXPIRE => todo!(),
+            OptionCode::COOKIE => 10,
+            OptionCode::TCPKEEPALIVE => todo!(),
+            OptionCode::PADDING => todo!(),
+            OptionCode::CHAIN => todo!(),
+            OptionCode::KEYTAG => todo!(),
+            OptionCode::EDE => todo!(),
+            OptionCode::CLIENTTAG => todo!(),
+            OptionCode::SERVERTAG => todo!(),
+            OptionCode::UMBRELLAIDENT => todo!(),
+            OptionCode::DEVICEID => todo!(),
+        }
+    }
+}
+
+impl Into<u16> for &OptionCode {
+    fn into(self) -> u16 {
+        (*self).into()
     }
 }

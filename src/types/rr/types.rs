@@ -1,8 +1,10 @@
-use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+use crate::packing::{
+    PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+};
 
 /// [`Type`] describes resource record types.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Type {
     /// A host address
     A,
@@ -54,7 +56,7 @@ pub enum Type {
     ANY,
 
     /// If we receive an invalid RR type, we fallback to this "type" after which we can terminate the connection
-    BOGUS,
+    UNKNOWN(u16),
 }
 
 impl Default for Type {
@@ -67,6 +69,13 @@ impl Unpackable for Type {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
         let ty = u16::unpack(buf)?;
         Ok(Self::from(ty))
+    }
+}
+
+impl Packable for Type {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        let ty: u16 = self.into();
+        ty.pack(buf)
     }
 }
 
@@ -89,7 +98,7 @@ impl ToString for Type {
             Type::MAILB => String::from("MAILB"),
             Type::MAILA => String::from("MAILA"),
             Type::ANY => String::from("ANY"),
-            Type::BOGUS => String::from("BOGUS"),
+            Type::UNKNOWN(v) => format!("UNKNOWN({})", v),
         }
     }
 }
@@ -113,7 +122,37 @@ impl From<u16> for Type {
             253 => Self::MAILB,
             254 => Self::MAILA,
             255 => Self::ANY,
-            _ => Self::BOGUS,
+            _ => Self::UNKNOWN(value),
         };
+    }
+}
+
+impl Into<u16> for Type {
+    fn into(self) -> u16 {
+        match self {
+            Type::A => 1,
+            Type::NS => 2,
+            Type::CNAME => 5,
+            Type::SOA => 6,
+            Type::NULL => 10,
+            Type::PTR => 12,
+            Type::HINFO => 13,
+            Type::MINFO => 14,
+            Type::MX => 15,
+            Type::TXT => 16,
+            Type::AAAA => 28,
+            Type::OPT => 41,
+            Type::AXFR => 252,
+            Type::MAILB => 253,
+            Type::MAILA => 254,
+            Type::ANY => 255,
+            Type::UNKNOWN(v) => v,
+        }
+    }
+}
+
+impl Into<u16> for &Type {
+    fn into(self) -> u16 {
+        (*self).into()
     }
 }

@@ -1,5 +1,7 @@
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
     types::{
         dns::Name,
         rr::{Class, Type},
@@ -55,5 +57,15 @@ impl Unpackable for RHeader {
             ttl,
             rdlen,
         })
+    }
+}
+
+impl Packable for RHeader {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        self.name.pack(buf)?;
+        self.ty.pack(buf)?;
+        self.class.pack(buf)?;
+        self.ttl.pack(buf)?;
+        self.rdlen.pack(buf)
     }
 }

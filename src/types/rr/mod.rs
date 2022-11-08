@@ -1,5 +1,7 @@
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
     types::dns::Name,
 };
 
@@ -52,6 +54,16 @@ impl Default for Record {
     }
 }
 
+impl ToString for Record {
+    fn to_string(&self) -> String {
+        format!(
+            "HEADER: {}\nDATA: {}",
+            self.header.to_string(),
+            self.data.to_string()
+        )
+    }
+}
+
 impl Unpackable for Record {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
         let header = match RHeader::unpack(buf) {
@@ -59,11 +71,18 @@ impl Unpackable for Record {
             Err(err) => return Err(err),
         };
 
-        let data = match RData::unpack(buf, header) {
+        let data = match RData::unpack(buf, &header) {
             Ok(data) => data,
             Err(err) => return Err(err),
         };
 
         Ok(Self { header, data })
+    }
+}
+
+impl Packable for Record {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        self.header.pack(buf)?;
+        self.data.pack(buf)
     }
 }

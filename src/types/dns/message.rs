@@ -39,6 +39,11 @@ impl Packable for Message {
     fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
         self.header.pack(buf)?;
 
+        pack_questions(buf, &self.question)?;
+        pack_rrs(buf, &self.answer)?;
+        pack_rrs(buf, &self.authority)?;
+        pack_rrs(buf, &self.additional)?;
+
         Ok(())
     }
 }
@@ -66,6 +71,16 @@ impl Message {
 
     pub fn set_additionals(&mut self, additionals: Vec<Record>) {
         self.additional = additionals;
+    }
+
+    /// Set if the message is a response.
+    pub fn set_is_response(&mut self, is_response: bool) {
+        self.header.is_query = !is_response;
+    }
+
+    /// Set if recursion is available.
+    pub fn set_rec_avail(&mut self, avail: bool) {
+        self.header.rec_avail = avail;
     }
 
     /// Returns QDCOUNT stored in the DNS message header.
@@ -117,7 +132,7 @@ fn unpack_questions(buf: &mut UnpackBuffer, count: u16) -> UnpackBufferResult<Ve
 
     // Let's do a naive approach and assume the QDCOUNT is correct
     // TODO (Techassi): Don't be naive
-    for i in 0..count {
+    for _ in 0..count {
         match Question::unpack(buf) {
             Ok(question) => questions.push(question),
             Err(err) => return Err(err),
@@ -130,7 +145,7 @@ fn unpack_questions(buf: &mut UnpackBuffer, count: u16) -> UnpackBufferResult<Ve
 fn unpack_rrs(buf: &mut UnpackBuffer, count: u16) -> UnpackBufferResult<Vec<Record>> {
     let mut rrs: Vec<Record> = Vec::new();
 
-    for i in 0..count {
+    for _ in 0..count {
         match Record::unpack(buf) {
             Ok(rr) => rrs.push(rr),
             Err(err) => return Err(err),
@@ -138,4 +153,20 @@ fn unpack_rrs(buf: &mut UnpackBuffer, count: u16) -> UnpackBufferResult<Vec<Reco
     }
 
     Ok(rrs)
+}
+
+fn pack_questions(buf: &mut PackBuffer, questions: &Vec<Question>) -> PackBufferResult {
+    for question in questions {
+        question.pack(buf)?;
+    }
+
+    Ok(())
+}
+
+fn pack_rrs(buf: &mut PackBuffer, records: &Vec<Record>) -> PackBufferResult {
+    for record in records {
+        record.pack(buf)?;
+    }
+
+    Ok(())
 }

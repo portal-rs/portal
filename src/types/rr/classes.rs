@@ -1,4 +1,6 @@
-use crate::packing::{UnpackBuffer, UnpackBufferResult, Unpackable};
+use crate::packing::{
+    PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+};
 
 /// [`Class`] describes resource record class codes.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
@@ -35,12 +37,15 @@ impl Default for Class {
 
 impl Unpackable for Class {
     fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let class = match u16::unpack(buf) {
-            Ok(class) => class,
-            Err(err) => return Err(err),
-        };
-
+        let class = u16::unpack(buf)?;
         Ok(Class::from(class))
+    }
+}
+
+impl Packable for Class {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        let class: u16 = self.into();
+        class.pack(buf)
     }
 }
 
@@ -80,5 +85,11 @@ impl Into<u16> for Class {
             Class::ANY => 255,
             Class::UNKNOWN(v) => v,
         }
+    }
+}
+
+impl Into<u16> for &Class {
+    fn into(self) -> u16 {
+        (*self).into()
     }
 }

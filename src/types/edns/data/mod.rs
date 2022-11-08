@@ -1,5 +1,5 @@
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult},
+    packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult},
     types::edns::OptionCode,
 };
 
@@ -19,8 +19,8 @@ impl OptionData {
         len: u16,
     ) -> UnpackBufferResult<Self> {
         match opt_code {
-            OptionCode::RESERVED => todo!(),
-            OptionCode::RESERVEDLOCAL => todo!(),
+            OptionCode::RESERVED(_) => todo!(),
+            OptionCode::RESERVEDLOCAL(_) => todo!(),
             OptionCode::UNASSIGNED => todo!(),
             OptionCode::LLQ => todo!(),
             OptionCode::UL => todo!(),
@@ -40,6 +40,14 @@ impl OptionData {
             OptionCode::SERVERTAG => todo!(),
             OptionCode::UMBRELLAIDENT => todo!(),
             OptionCode::DEVICEID => todo!(),
+        }
+    }
+}
+
+impl Packable for OptionData {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        match self {
+            OptionData::COOKIE(c) => c.pack(buf),
         }
     }
 }
