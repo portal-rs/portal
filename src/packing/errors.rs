@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-pub enum UnpackError {
+pub enum PackingError {
     InvalidLabelLenOrPointer(u8),
     InvalidPointerLocation,
     DomainNameLabelTooLong,
@@ -10,24 +10,20 @@ pub enum UnpackError {
     TooShort,
 }
 
-impl Display for UnpackError {
+impl Display for PackingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            UnpackError::InvalidLabelLenOrPointer(b) => {
+            PackingError::InvalidLabelLenOrPointer(b) => {
                 write!(f, "Invalid domain name label ({})", b)
             }
-            UnpackError::InvalidPointerLocation => {
+            PackingError::InvalidPointerLocation => {
                 write!(f, "Invalid compression pointer location")
             }
-            UnpackError::DomainNameLabelTooLong => write!(f, "Domain name label too long"),
-            UnpackError::DomainNameTooLong => write!(f, "Domain name too long"),
-            UnpackError::MissingHeader => write!(f, "Missing header"),
-            UnpackError::NoMessageBody => write!(f, "No body data"),
-            UnpackError::TooShort => write!(f, "Buf too short"),
+            PackingError::DomainNameLabelTooLong => write!(f, "Domain name label too long"),
+            PackingError::DomainNameTooLong => write!(f, "Domain name too long"),
+            PackingError::MissingHeader => write!(f, "Missing header"),
+            PackingError::NoMessageBody => write!(f, "No body data"),
+            PackingError::TooShort => write!(f, "Buf too short"),
         }
     }
-}
-
-pub enum PackError {
-    TooShort,
 }

@@ -1,12 +1,12 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use crate::packing::PackError;
+use crate::packing::PackingError;
 
 pub struct PackBuffer {
     buf: Vec<u8>,
 }
 
-pub type PackBufferResult = Result<(), PackError>;
+pub type PackBufferResult = Result<(), PackingError>;
 
 impl PackBuffer {
     pub fn new() -> Self {
@@ -19,6 +19,10 @@ impl PackBuffer {
 
     pub fn is_empty(&self) -> bool {
         return self.buf.len() == 0;
+    }
+
+    pub fn push(&mut self, b: u8) {
+        self.buf.push(b);
     }
 
     pub fn pack_slice(&mut self, s: &[u8]) -> PackBufferResult {

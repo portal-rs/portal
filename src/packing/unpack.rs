@@ -1,6 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use crate::packing::errors::UnpackError;
+use crate::packing::errors::PackingError;
 
 pub struct UnpackBuffer<'a> {
     buf: &'a [u8],
@@ -8,7 +8,7 @@ pub struct UnpackBuffer<'a> {
     ptrs: Vec<usize>,
 }
 
-pub type UnpackBufferResult<T> = Result<T, UnpackError>;
+pub type UnpackBufferResult<T> = Result<T, PackingError>;
 
 impl<'a> UnpackBuffer<'a> {
     pub fn new(buf: &'a [u8]) -> Self {
@@ -25,7 +25,7 @@ impl<'a> UnpackBuffer<'a> {
             return Ok(*first);
         }
 
-        Err(UnpackError::TooShort)
+        Err(PackingError::TooShort)
     }
 
     pub fn peek(&self) -> Option<u8> {
@@ -41,7 +41,7 @@ impl<'a> UnpackBuffer<'a> {
 
     pub fn jump_to(&mut self, index: usize) -> UnpackBufferResult<()> {
         if index > self.buf.len() {
-            return Err(UnpackError::TooShort);
+            return Err(PackingError::TooShort);
         }
 
         self.ptrs.push(self.offset());
@@ -71,7 +71,7 @@ impl<'a> UnpackBuffer<'a> {
     pub fn unpack_character_string(&mut self, max_len: u8) -> UnpackBufferResult<&[u8]> {
         let len = match self.pop() {
             Ok(len) if len <= max_len => len,
-            _ => return Err(UnpackError::TooShort),
+            _ => return Err(PackingError::TooShort),
         };
 
         return self.unpack_slice(len as usize);
@@ -79,7 +79,7 @@ impl<'a> UnpackBuffer<'a> {
 
     pub fn unpack_slice(&mut self, nbytes: usize) -> UnpackBufferResult<&'a [u8]> {
         if nbytes > self.rest.len() {
-            return Err(UnpackError::TooShort);
+            return Err(PackingError::TooShort);
         }
 
         let (slice, rest) = self.rest.split_at(nbytes);
@@ -104,7 +104,7 @@ impl Unpackable for u16 {
             return Ok(n);
         }
 
-        return Err(UnpackError::TooShort);
+        return Err(PackingError::TooShort);
     }
 }
 
@@ -115,7 +115,7 @@ impl Unpackable for u32 {
             return Ok(n);
         }
 
-        return Err(UnpackError::TooShort);
+        return Err(PackingError::TooShort);
     }
 }
 
@@ -126,7 +126,7 @@ impl Unpackable for u64 {
             return Ok(n);
         }
 
-        return Err(UnpackError::TooShort);
+        return Err(PackingError::TooShort);
     }
 }
 
@@ -140,7 +140,7 @@ impl Unpackable for u128 {
             return Ok(n);
         }
 
-        return Err(UnpackError::TooShort);
+        return Err(PackingError::TooShort);
     }
 }
 
@@ -151,7 +151,7 @@ impl Unpackable for Ipv4Addr {
             return Ok(ip_addr);
         }
 
-        return Err(UnpackError::TooShort);
+        return Err(PackingError::TooShort);
     }
 }
 
@@ -162,6 +162,6 @@ impl Unpackable for Ipv6Addr {
             return Ok(ip_addr);
         }
 
-        return Err(UnpackError::TooShort);
+        return Err(PackingError::TooShort);
     }
 }
