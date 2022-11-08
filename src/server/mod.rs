@@ -122,7 +122,7 @@ impl Server {
                     continue;
                 }
             };
-            buf.shrink_to(len);
+            buf.resize(len, 0);
 
             let resolver = resolver.clone();
 
