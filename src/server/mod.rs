@@ -4,8 +4,8 @@ use tokio::{self, net};
 
 use crate::{
     config, constants,
+    errors::{AppError, AppErrorVariant, ServerError},
     resolver::{ResolveMode, Resolver},
-    server::error::ServerError,
     utils::network::Network,
 };
 
@@ -39,34 +39,34 @@ impl Default for Server {
 }
 
 impl Server {
-    pub fn new(cfg: config::Config) -> Result<Self, ServerError> {
+    pub fn new(cfg: config::Config) -> Result<Self, AppError> {
         let addr_port: std::net::SocketAddr = match cfg.server.address.parse() {
             Ok(addr) => addr,
             Err(err) => {
-                return Err(ServerError::new(format!(
-                    "Failed to parse server address: {}",
-                    err
-                )))
+                return Err(AppError::new(
+                    err.to_string(),
+                    AppErrorVariant::ServerError(ServerError::InvalidAddress),
+                ))
             }
         };
 
         let network = match Network::parse(cfg.server.network) {
             Ok(net) => net,
             Err(err) => {
-                return Err(ServerError::new(format!(
-                    "Failed to parse server network: {}",
-                    err
-                )))
+                return Err(AppError::new(
+                    err.to_string(),
+                    AppErrorVariant::ServerError(ServerError::InvalidNetwork),
+                ))
             }
         };
 
         let resolve_mode = match ResolveMode::parse(cfg.resolver.mode) {
             Ok(mode) => mode,
             Err(err) => {
-                return Err(ServerError::new(format!(
-                    "Failed to parse resolver mode: {}",
-                    err
-                )))
+                return Err(AppError::new(
+                    err.to_string(),
+                    AppErrorVariant::ServerError(ServerError::InvalidResolverMode),
+                ))
             }
         };
 
@@ -80,9 +80,12 @@ impl Server {
     }
 
     #[tokio::main]
-    pub async fn run(&mut self) -> Result<(), ServerError> {
+    pub async fn run(&mut self) -> Result<(), AppError> {
         if self.running {
-            return Err(ServerError::new("Server is already running"));
+            return Err(AppError::new(
+                "This server instance is already running. It can be restarted",
+                AppErrorVariant::ServerError(ServerError::AlreadyRunning),
+            ));
         }
         self.running = true;
 
@@ -93,14 +96,14 @@ impl Server {
         }
     }
 
-    async fn run_udp(&self) -> Result<(), ServerError> {
+    async fn run_udp(&self) -> Result<(), AppError> {
         let socket = match net::UdpSocket::bind(self.addr_port).await {
             Ok(socket) => socket,
             Err(err) => {
-                return Err(ServerError::new(format!(
-                    "Failed to bind UDP socket: {}",
-                    err
-                )))
+                return Err(AppError::new(
+                    err.to_string(),
+                    AppErrorVariant::ServerError(ServerError::BindFailure),
+                ))
             }
         };
 

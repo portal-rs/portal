@@ -1,47 +1,54 @@
 use std::fmt::Display;
 
-use crate::constants;
+mod client;
+mod config;
+mod proto;
+mod server;
 
-pub enum ProtocolError {
-    InvalidRDataLenRead { expected: u16, found: u16 },
-    InvalidLabelLenOrPointer(u8),
-    InvalidPointerLocation,
-    DomainNameLabelTooLong,
-    UnpackFailure(String),
-    PackFailure(String),
-    DomainNameTooLong,
-    BufTooShort,
+pub use client::*;
+pub use config::*;
+pub use proto::*;
+pub use server::*;
+
+pub struct AppError {
+    variant: AppErrorVariant,
+    details: String,
 }
 
-impl Display for ProtocolError {
+impl Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.variant, self.details)
+    }
+}
+
+impl AppError {
+    pub fn new<D>(details: D, variant: AppErrorVariant) -> Self
+    where
+        D: Into<String>,
+    {
+        Self {
+            variant: variant,
+            details: details.into(),
+        }
+    }
+}
+
+pub enum AppErrorVariant {
+    ProtocolError(ProtocolError),
+    ConfigError(ConfigError),
+    ServerError(ServerError),
+    ClientError(ClientError),
+    Generic(String),
+}
+
+impl Display for AppErrorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProtocolError::InvalidRDataLenRead { expected, found } => write!(
-                f,
-                "Invalid RDATA length read (Expected: {}, Found: {})",
-                expected, found
-            ),
-            ProtocolError::InvalidLabelLenOrPointer(ptr) => write!(
-                f,
-                "Invalid domain name label length or compression pointer ({})",
-                ptr
-            ),
-            ProtocolError::UnpackFailure(details) => write!(f, "Failed to unpack: {}", details),
-            ProtocolError::PackFailure(details) => write!(f, "Failed to pack: {}", details),
-            ProtocolError::InvalidPointerLocation => {
-                write!(f, "Invalid compression pointer location")
-            }
-            ProtocolError::DomainNameLabelTooLong => write!(
-                f,
-                "Domain name label too long (< {})",
-                constants::dns::MAX_LABEL_LENGTH
-            ),
-            ProtocolError::DomainNameTooLong => write!(
-                f,
-                "Domain name to long (< {})",
-                constants::dns::MAX_DOMAIN_LENGTH
-            ),
-            ProtocolError::BufTooShort => write!(f, "Buf too short"),
+            AppErrorVariant::ProtocolError(err) => write!(f, "Protocol error: {}", err),
+            AppErrorVariant::ConfigError(err) => write!(f, "Config error: {}", err),
+            AppErrorVariant::ServerError(err) => write!(f, "Server error: {}", err),
+            AppErrorVariant::ClientError(err) => write!(f, "Client error: {}", err),
+            AppErrorVariant::Generic(err) => write!(f, "Error: {}", err),
         }
     }
 }
