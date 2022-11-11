@@ -1,6 +1,7 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
+    errors::ProtocolError,
     packing::{
         PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
     },
@@ -314,7 +315,14 @@ impl RData {
             Err(err) => return Err(err),
         };
 
-        // TODO (Techassi): Check header rdlen against real len
+        // Check that we read the correct number of octets defined by RDLEN
+        let length_read = (buf.offset() - buf_offset_start) as u16;
+        if length_read != header.rdlen {
+            return Err(ProtocolError::InvalidRDataLenRead {
+                expected: header.rdlen,
+                found: length_read,
+            });
+        }
 
         Ok(rdata)
     }

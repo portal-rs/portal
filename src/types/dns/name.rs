@@ -1,9 +1,10 @@
+use std::fmt::Display;
+
 use crate::{
     constants,
     errors::ProtocolError,
     packing::{
-        PackBuffer, PackBufferResult, Packable, PackingError, UnpackBuffer, UnpackBufferResult,
-        Unpackable,
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
     },
 };
 
@@ -31,9 +32,9 @@ impl Default for Name {
     }
 }
 
-impl ToString for Name {
-    fn to_string(&self) -> String {
-        return self.to_dotted_string();
+impl Display for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_dotted_string())
     }
 }
 
@@ -73,7 +74,7 @@ impl Unpackable for Name {
                     Some(b) if b & 0xC0 == 0x0 => NameParseState::Label,
 
                     // A byte which shouldn't be here
-                    Some(b) => return Err(PackingError::InvalidLabelLenOrPointer(b)),
+                    Some(b) => return Err(ProtocolError::InvalidLabelLenOrPointer(b)),
                 },
                 NameParseState::Pointer => {
                     // Read a u16 which starts with 11 (0xC0) and apply the bit
@@ -86,7 +87,7 @@ impl Unpackable for Name {
                     // Ensure we jump to a location which comes before the
                     // current offset
                     if pointer_location > buf.offset() {
-                        return Err(PackingError::InvalidPointerLocation);
+                        return Err(ProtocolError::InvalidPointerLocation);
                     }
 
                     // Jump to the pointer location by updating the underlying
@@ -101,14 +102,14 @@ impl Unpackable for Name {
                     let label = match buf.unpack_character_string(constants::dns::MAX_LABEL_LENGTH)
                     {
                         Ok(label) => label,
-                        Err(_) => return Err(PackingError::DomainNameLabelTooLong),
+                        Err(_) => return Err(ProtocolError::DomainNameLabelTooLong),
                     };
 
                     // Add the label to the domain name. This returns an error
                     // if the domain name length exceeds the maximum domain
                     // name length of 255
                     if let Err(err) = name.add_label(label.into()) {
-                        return Err(PackingError::DomainNameTooLong);
+                        return Err(ProtocolError::DomainNameTooLong);
                     }
 
                     NameParseState::LabelLenOrPointer
@@ -143,7 +144,7 @@ impl Packable for Name {
         // TODO (Techassi): This does NOT handle compression. Add it
         for label in self.iter() {
             if label.len() > constants::dns::MAX_LABEL_LENGTH.into() {
-                return Err(PackingError::DomainNameLabelTooLong);
+                return Err(ProtocolError::DomainNameLabelTooLong);
             }
 
             buf.push(label.len() as u8);
@@ -154,7 +155,7 @@ impl Packable for Name {
         buf.push(0);
 
         if buf.len() - buffer_len_start > constants::dns::MAX_DOMAIN_LENGTH.into() {
-            return Err(PackingError::DomainNameTooLong);
+            return Err(ProtocolError::DomainNameTooLong);
         }
 
         Ok(())

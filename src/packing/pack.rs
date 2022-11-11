@@ -1,12 +1,12 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use crate::packing::PackingError;
+use crate::errors::ProtocolError;
 
 pub struct PackBuffer {
     buf: Vec<u8>,
 }
 
-pub type PackBufferResult = Result<(), PackingError>;
+pub type PackBufferResult = Result<(), ProtocolError>;
 
 impl PackBuffer {
     pub fn new() -> Self {
