@@ -5,9 +5,11 @@ use std::{
 
 use tokio::net::UdpSocket;
 
-use crate::{client::error::ClientError, utils::network::Network};
+use crate::utils::network::Network;
 
 mod error;
+
+pub use error::*;
 
 pub struct Client {
     network: Network,

@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
+use anyhow::Result;
 use clap::Args;
-
-use portal::{config::Config, errors::AppError, server::Server};
+use portal::{config::Config, server::Server};
 
 #[derive(Args)]
 pub struct Arguments {
@@ -11,7 +11,7 @@ pub struct Arguments {
     config_path: Option<PathBuf>,
 }
 
-pub fn execute(args: Arguments) -> Result<(), AppError> {
+pub fn execute(args: Arguments) -> Result<()> {
     // Load config located at provided path or use default config
     let cfg = match args.config_path {
         Some(path) => Config::from_file(path, None)?,
@@ -20,5 +20,7 @@ pub fn execute(args: Arguments) -> Result<(), AppError> {
 
     // Create and run DNS server
     let mut srv = Server::new(cfg)?;
-    srv.run()
+    srv.run()?;
+
+    Ok(())
 }

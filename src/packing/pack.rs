@@ -1,6 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use crate::errors::ProtocolError;
+use crate::error::ProtocolError;
 
 pub struct PackBuffer {
     buf: Vec<u8>,

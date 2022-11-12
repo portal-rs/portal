@@ -1,27 +1,19 @@
-use std::fmt;
+use thiserror::Error;
 
-pub struct ServerError {
-    message: String,
-}
+#[derive(Debug, Error)]
+pub enum ServerError {
+    #[error("Invalid resolver mode - expected r/f/i ({0})")]
+    InvalidResolverMode(String),
 
-impl ServerError {
-    pub fn new<M: Into<String>>(message: M) -> Self {
-        return Self {
-            message: message.into(),
-        };
-    }
-}
+    #[error("Invalid bind address ({0})")]
+    InvalidAddress(String),
 
-impl fmt::Display for ServerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
+    #[error("Invalid network - expected udp/tcp ({0})")]
+    InvalidNetwork(String),
 
-impl fmt::Debug for ServerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ServerError")
-            .field("message", &self.message)
-            .finish()
-    }
+    #[error("Failed to start server, already running")]
+    AlreadyRunning,
+
+    #[error("Failed to bind socket ({0})")]
+    Bind(String),
 }

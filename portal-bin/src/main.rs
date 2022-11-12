@@ -1,7 +1,7 @@
 use std::process;
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-use portal::errors::{AppError, AppErrorVariant};
 
 mod run;
 
@@ -26,22 +26,11 @@ fn main() {
     }
 }
 
-pub fn execute() -> Result<(), AppError> {
-    let cli = match Cli::try_parse() {
-        Err(err) => {
-            return Err(AppError::new(
-                err.to_string(),
-                AppErrorVariant::Generic(String::from("Failed to parse CLI")),
-            ))
-        }
-        Ok(c) => c,
-    };
+pub fn execute() -> Result<()> {
+    let cli = Cli::try_parse()?;
 
     match cli.commands {
-        Commands::Run(args) => match run::execute(args) {
-            Err(err) => return Err(err),
-            Ok(_) => {}
-        },
+        Commands::Run(args) => run::execute(args)?,
     }
 
     Ok(())

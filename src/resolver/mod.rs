@@ -16,7 +16,7 @@ pub use iterative::*;
 pub use mode::*;
 pub use recursive::*;
 
-pub type ResolveResult = Result<ResultRecords, ResolveError>;
+pub type ResolveResult = Result<ResultRecords, ResolverError>;
 
 pub struct ResultRecords {
     answer: Vec<Record>,

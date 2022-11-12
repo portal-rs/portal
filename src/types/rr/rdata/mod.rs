@@ -1,7 +1,7 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    errors::ProtocolError,
+    error::ProtocolError,
     packing::{
         PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
     },
@@ -16,6 +16,7 @@ mod minfo;
 mod mx;
 mod null;
 mod opt;
+mod soa;
 mod txt;
 
 use hinfo::*;
@@ -23,6 +24,7 @@ use minfo::*;
 use mx::*;
 use null::*;
 use opt::*;
+use soa::*;
 use txt::*;
 
 #[derive(Debug)]
@@ -96,8 +98,72 @@ pub enum RData {
     ///the description of name server logic in [RFC-1034] for details.
     /// ```
     CNAME(Name),
-    // TODO (Techassi): Implement SOA
-    SOA,
+
+    /// ```text
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// /                     MNAME                     /
+    /// /                                               /
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// /                     RNAME                     /
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// |                    SERIAL                     |
+    /// |                                               |
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// |                    REFRESH                    |
+    /// |                                               |
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// |                     RETRY                     |
+    /// |                                               |
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// |                    EXPIRE                     |
+    /// |                                               |
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    /// |                    MINIMUM                    |
+    /// |                                               |
+    /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    ///
+    /// where:
+    ///
+    /// MNAME           The <domain-name> of the name server that was the
+    ///                 original or primary source of data for this zone.
+    ///
+    /// RNAME           A <domain-name> which specifies the mailbox of the
+    ///                 person responsible for this zone.
+    ///
+    /// SERIAL          The unsigned 32 bit version number of the original
+    ///                 copy of the zone.  Zone transfers preserve this value.
+    ///                 This value wraps and should be compared using sequence
+    ///                 space arithmetic.
+    ///
+    /// REFRESH         A 32 bit time interval before the zone should be
+    ///                 refreshed.
+    ///
+    /// RETRY           A 32 bit time interval that should elapse before a
+    ///                 failed refresh should be retried.
+    ///
+    /// EXPIRE          A 32 bit time value that specifies the upper limit on
+    ///                 the time interval that can elapse before the zone is no
+    ///                 longer authoritative.
+    ///
+    /// MINIMUM         The unsigned 32 bit minimum TTL field that should be
+    /// exported with any RR from this zone.
+    ///
+    /// SOA records cause no additional section processing.
+    ///
+    /// All times are in units of seconds.
+    ///
+    /// Most of these fields are pertinent only for name server maintenance
+    /// operations.  However, MINIMUM is used in all query operations that
+    /// retrieve RRs from a zone.  Whenever a RR is sent in a response to a
+    /// query, the TTL field is set to the maximum of the TTL field from the RR
+    /// and the MINIMUM field in the appropriate SOA.  Thus MINIMUM is a lower
+    /// bound on the TTL field for all RRs in a zone.  Note that this use of
+    /// MINIMUM should occur when the RRs are copied into the response and not
+    /// when the zone is loaded from a master file or via a zone transfer.  The
+    /// reason for this provison is to allow future dynamic update facilities to
+    /// change the SOA RR with known semantics.
+    /// ```
+    SOA(SOA),
 
     /// ```text
     /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -243,17 +309,17 @@ impl Default for RData {
 impl ToString for RData {
     fn to_string(&self) -> String {
         match self {
-            RData::A(ipv4) => ipv4.to_string(),
-            RData::NS(name) => name.to_string(),
-            RData::CNAME(name) => name.to_string(),
-            RData::SOA => todo!(),
+            RData::A(a) => a.to_string(),
+            RData::NS(ns) => ns.to_string(),
+            RData::CNAME(cname) => cname.to_string(),
+            RData::SOA(soa) => soa.to_string(),
             RData::NULL(_) => todo!(),
             RData::PTR(_) => todo!(),
             RData::HINFO(_) => todo!(),
             RData::MINFO(_) => todo!(),
             RData::MX(_) => todo!(),
             RData::TXT(_) => todo!(),
-            RData::AAAA(_) => todo!(),
+            RData::AAAA(aaaa) => aaaa.to_string(),
             RData::OPT(_) => todo!(),
             RData::AXFR => todo!(),
             RData::MAILB => todo!(),
@@ -267,17 +333,17 @@ impl ToString for RData {
 impl Packable for RData {
     fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
         match self {
-            RData::A(_) => todo!(),
-            RData::NS(_) => todo!(),
-            RData::CNAME(_) => todo!(),
-            RData::SOA => todo!(),
+            RData::A(a) => a.pack(buf),
+            RData::NS(ns) => ns.pack(buf),
+            RData::CNAME(cname) => cname.pack(buf),
+            RData::SOA(soa) => soa.pack(buf),
             RData::NULL(_) => todo!(),
-            RData::PTR(_) => todo!(),
+            RData::PTR(ptr) => ptr.pack(buf),
             RData::HINFO(_) => todo!(),
             RData::MINFO(_) => todo!(),
             RData::MX(_) => todo!(),
             RData::TXT(_) => todo!(),
-            RData::AAAA(_) => todo!(),
+            RData::AAAA(aaaa) => aaaa.pack(buf),
             RData::OPT(opt) => opt.pack(buf),
             RData::AXFR => todo!(),
             RData::MAILB => todo!(),
@@ -290,11 +356,13 @@ impl Packable for RData {
 
 impl RData {
     pub fn unpack(buf: &mut UnpackBuffer, header: &RHeader) -> UnpackBufferResult<Self> {
+        let buf_offset_start = buf.offset();
+
         let result = match header.ty {
             Type::A => Ipv4Addr::unpack(buf).map(Self::A),
             Type::NS => Name::unpack(buf).map(Self::NS),
             Type::CNAME => Name::unpack(buf).map(Self::CNAME),
-            Type::SOA => todo!(),
+            Type::SOA => SOA::unpack(buf).map(Self::SOA),
             Type::NULL => NULL::unpack(buf, header.rdlen).map(Self::NULL),
             Type::PTR => Name::unpack(buf).map(Self::PTR),
             Type::HINFO => HINFO::unpack(buf).map(Self::HINFO),

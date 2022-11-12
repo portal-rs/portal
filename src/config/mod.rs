@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use serde::Deserialize;
 use toml;
 
-use crate::errors::{AppError, AppErrorVariant, ConfigError};
+mod error;
+
+pub use error::*;
 
 // TODO (Techassi): Create custom 'partial' proc macro function
 #[derive(Deserialize)]
@@ -18,25 +20,15 @@ pub struct Config {
 impl Config {
     /// Reads a TOML config file at `path` and returns a [`Config`] or any [`ConfigError`] encountered while reading
     /// and parsing. The function optionally validates the config.
-    pub fn from_file(path: PathBuf, _validate: Option<bool>) -> Result<Self, AppError> {
+    pub fn from_file(path: PathBuf, _validate: Option<bool>) -> Result<Self, ConfigError> {
         let b = match fs::read_to_string(path) {
             Ok(b) => b,
-            Err(err) => {
-                return Err(AppError::new(
-                    err.to_string(),
-                    AppErrorVariant::ConfigError(ConfigError::Read),
-                ))
-            }
+            Err(err) => return Err(ConfigError::Read(err)),
         };
 
         let c: Self = match toml::from_str(&b) {
             Ok(c) => c,
-            Err(err) => {
-                return Err(AppError::new(
-                    err.to_string(),
-                    AppErrorVariant::ConfigError(ConfigError::Deserialize),
-                ));
-            }
+            Err(err) => return Err(ConfigError::Deserialize(err)),
         };
 
         Ok(c)

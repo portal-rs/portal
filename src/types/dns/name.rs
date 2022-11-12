@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     constants,
-    errors::ProtocolError,
+    error::ProtocolError,
     packing::{
         PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
     },
