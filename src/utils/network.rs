@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::fmt;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 pub enum Network {
     Tcp,
     Udp,
