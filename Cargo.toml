@@ -16,6 +16,7 @@ serde = { version = "1.0.144", features = ["derive"] }
 thiserror = { workspace = true }
 enum_dispatch = "0.3.8"
 toml = "0.5.9"
+rand = "0.8.5"
 
 [workspace.dependencies]
 thiserror = "1.0.37"
