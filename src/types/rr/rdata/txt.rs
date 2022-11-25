@@ -22,4 +22,15 @@ impl TXT {
 
         Ok(TXT { data })
     }
+
+    /// Returns the length of the [`TXT`] record.
+    pub fn len(&self) -> usize {
+        let mut len = 0;
+
+        for v in &self.data {
+            len += v.len()
+        }
+
+        return len;
+    }
 }

@@ -394,4 +394,27 @@ impl RData {
 
         Ok(rdata)
     }
+
+    /// Returns the length of RDATA
+    pub fn len(&self) -> usize {
+        match self {
+            RData::A(_) => 4,
+            RData::NS(ns) => ns.len(),
+            RData::CNAME(cname) => cname.len(),
+            RData::SOA(soa) => soa.len(),
+            RData::NULL(_) => 0,
+            RData::PTR(ptr) => ptr.len(),
+            RData::HINFO(hinfo) => hinfo.len(),
+            RData::MINFO(minfo) => minfo.len(),
+            RData::MX(mx) => mx.len(),
+            RData::TXT(txt) => txt.len(),
+            RData::AAAA(_) => 16,
+            RData::OPT(_) => todo!(),
+            RData::AXFR => todo!(),
+            RData::MAILB => todo!(),
+            RData::MAILA => todo!(),
+            RData::ANY => todo!(),
+            RData::BOGUS => todo!(),
+        }
+    }
 }

@@ -1,13 +1,9 @@
-use std::ops::Deref;
-
 use crate::{
+    constants,
     packing::{
         PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
     },
-    types::{
-        dns::{message, RawHeader},
-        rr::Record,
-    },
+    types::rr::Record,
 };
 
 use super::{Header, Question};
@@ -18,9 +14,9 @@ use super::{Header, Question};
 pub struct Message {
     pub header: Header,
     pub question: Vec<Question>,
-    pub answer: Vec<Record>,
-    pub authority: Vec<Record>,
-    pub additional: Vec<Record>,
+    pub answers: Vec<Record>,
+    pub authorities: Vec<Record>,
+    pub additionals: Vec<Record>,
 }
 
 impl Default for Message {
@@ -28,9 +24,9 @@ impl Default for Message {
         Self {
             header: Header::default(),
             question: Vec::new(),
-            answer: Vec::new(),
-            authority: Vec::new(),
-            additional: Vec::new(),
+            answers: Vec::new(),
+            authorities: Vec::new(),
+            additionals: Vec::new(),
         }
     }
 }
@@ -40,9 +36,9 @@ impl Packable for Message {
         self.header.pack(buf)?;
 
         pack_questions(buf, &self.question)?;
-        pack_rrs(buf, &self.answer)?;
-        pack_rrs(buf, &self.authority)?;
-        pack_rrs(buf, &self.additional)?;
+        pack_rrs(buf, &self.answers)?;
+        pack_rrs(buf, &self.authorities)?;
+        pack_rrs(buf, &self.additionals)?;
 
         Ok(())
     }
@@ -61,16 +57,20 @@ impl Message {
         self.question = questions;
     }
 
+    pub fn add_question(&mut self, question: Question) {
+        self.question.push(question);
+    }
+
     pub fn set_answers(&mut self, answers: Vec<Record>) {
-        self.answer = answers;
+        self.answers = answers;
     }
 
     pub fn set_authorities(&mut self, authorities: Vec<Record>) {
-        self.authority = authorities;
+        self.authorities = authorities;
     }
 
     pub fn set_additionals(&mut self, additionals: Vec<Record>) {
-        self.additional = additionals;
+        self.additionals = additionals;
     }
 
     /// Set if the message is a response.
@@ -101,6 +101,26 @@ impl Message {
     /// Returns ARCOUNT stored in the DNS message header.
     pub fn arcount(&self) -> u16 {
         return self.header.arcount;
+    }
+
+    /// Returns the length of this DNS [`Message`].
+    pub fn len(&self) -> usize {
+        let mut len = constants::dns::HEADER_LENGTH;
+        len += self.question[0].len();
+
+        for answer in &self.answers {
+            len += answer.len();
+        }
+
+        for authority in &self.authorities {
+            len += authority.len();
+        }
+
+        for additional in &self.additionals {
+            len += additional.len();
+        }
+
+        return len;
     }
 
     /// Unpack the complete DNS [`Message`] based on the already unpacked [`Header`].

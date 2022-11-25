@@ -21,3 +21,9 @@ impl Unpackable for HINFO {
         Ok(Self { cpu, os })
     }
 }
+
+impl HINFO {
+    pub fn len(&self) -> usize {
+        return self.cpu.len() + self.os.len();
+    }
+}

@@ -21,30 +21,6 @@ pub struct Record {
     data: RData,
 }
 
-impl Record {
-    pub fn new() -> Self {
-        Record::default()
-    }
-
-    /// Set the complete resource record header [`RHeader`] at once.
-    pub fn set_header(&mut self, header: RHeader) -> &mut Self {
-        self.header = header;
-        self
-    }
-
-    /// Set the resource record header domain name.
-    pub fn set_header_name(&mut self, name: Name) -> &mut Self {
-        self.header.name = name;
-        self
-    }
-
-    /// Set the [`RData`] section of the [`Record`].
-    pub fn set_rdata(&mut self, rdata: RData) -> &mut Self {
-        self.data = rdata;
-        self
-    }
-}
-
 impl Default for Record {
     fn default() -> Self {
         Self {
@@ -84,5 +60,33 @@ impl Packable for Record {
     fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
         self.header.pack(buf)?;
         self.data.pack(buf)
+    }
+}
+
+impl Record {
+    pub fn new() -> Self {
+        Record::default()
+    }
+
+    /// Set the complete resource record header [`RHeader`] at once.
+    pub fn set_header(&mut self, header: RHeader) -> &mut Self {
+        self.header = header;
+        self
+    }
+
+    /// Set the resource record header domain name.
+    pub fn set_header_name(&mut self, name: Name) -> &mut Self {
+        self.header.name = name;
+        self
+    }
+
+    /// Set the [`RData`] section of the [`Record`].
+    pub fn set_rdata(&mut self, rdata: RData) -> &mut Self {
+        self.data = rdata;
+        self
+    }
+
+    pub fn len(&self) -> usize {
+        return self.data.len();
     }
 }

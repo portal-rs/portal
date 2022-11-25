@@ -17,3 +17,9 @@ impl Unpackable for MINFO {
         Ok(Self { rmailbx, emailbx })
     }
 }
+
+impl MINFO {
+    pub fn len(&self) -> usize {
+        return self.rmailbx.len() + self.emailbx.len();
+    }
+}
