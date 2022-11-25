@@ -16,4 +16,7 @@ pub enum ServerError {
 
     #[error("Failed to bind socket ({0})")]
     Bind(String),
+
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
 }

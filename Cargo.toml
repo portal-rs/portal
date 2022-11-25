@@ -11,7 +11,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros", "time"] }
 serde = { version = "1.0.144", features = ["derive"] }
 thiserror = { workspace = true }
 enum_dispatch = "0.3.8"
