@@ -162,6 +162,36 @@ impl Packable for Name {
     }
 }
 
+impl TryFrom<String> for Name {
+    type Error = ProtocolError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let mut name = Self::default();
+
+        // If root, return Name::default()
+        if value == "." {
+            return Ok(name);
+        }
+
+        let parts = value.split('.');
+        for part in parts {
+            if part != "" {
+                name.add_label(Label::from(part.as_bytes()))?;
+            }
+        }
+
+        return Ok(name);
+    }
+}
+
+impl TryFrom<&str> for Name {
+    type Error = ProtocolError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_string())
+    }
+}
+
 impl Name {
     /// Return an [`Iterator`] over the labels in the domain name.
     pub fn iter(&self) -> NameIterator<'_> {
