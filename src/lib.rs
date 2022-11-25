@@ -1,6 +1,5 @@
 mod error;
 
-pub mod binary;
 pub mod client;
 pub mod config;
 pub mod constants;
