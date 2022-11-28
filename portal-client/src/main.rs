@@ -23,7 +23,7 @@ async fn main() {
     let name = Name::try_from(args[1].clone()).unwrap();
 
     match client
-        .query(name, Class::IN, Type::A, args[2].parse().unwrap())
+        .query((name, Type::A, Class::IN), args[2].parse().unwrap())
         .await
     {
         Ok(_) => {}

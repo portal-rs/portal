@@ -1,7 +1,4 @@
-use std::{
-    net::{IpAddr, SocketAddr},
-    time,
-};
+use std::{collections::HashSet, net::SocketAddr, sync::Arc, time};
 
 use rand;
 use tokio::net::UdpSocket;
@@ -10,8 +7,8 @@ use crate::{
     constants,
     packing::{PackBuffer, Packable, UnpackBuffer, Unpackable},
     types::{
-        dns::{Header, Message, Name, Question},
-        rr::{Class, Type},
+        dns::{Header, Message, Query, Question, ToQuery},
+        udp::Session,
     },
     utils::{timeout, Network, TimeoutResult},
 };
@@ -24,12 +21,14 @@ pub type ClientResult<T> = Result<T, ClientError>;
 
 pub struct Client {
     network: Network,
-    bind_timeout: time::Duration,
     read_timeout: time::Duration,
     write_timeout: time::Duration,
-    header_id: u16,
-    socket: UdpSocket,
+    socket: Arc<UdpSocket>,
+    active_ids: Arc<HashSet<u16>>,
 }
+
+// TODO (Techassi): Implement a connection struct which finally binds to a socket.
+// This connection then provides methods like query().
 
 impl Client {
     /// Tries to create a new DNS [`Client`] with default settings. This client
@@ -55,95 +54,140 @@ impl Client {
         ClientBuilder::default()
     }
 
-    /// Sends a query to `addr` asking for `name`, `class` and `ty`.
-    pub async fn query(
-        &self,
-        name: Name,
-        class: Class,
-        ty: Type,
-        addr: IpAddr,
-    ) -> ClientResult<()> {
-        let start = time::Instant::now();
+    /// Sends a query to `addr` asking for `name`, `ty` and `class`.
+    ///
+    /// ### Example
+    ///
+    /// ```no_run
+    /// use std::net::SocketAddr;
+    /// use portal::{client::Client;, types::{dns::Name, rr::{Class, Type}}}
+    ///
+    /// let client = Client::new().await.unwrap();
+    /// let addr: SocketAddr = "1.1.1.1:53".parse();
+    ///
+    /// client.query((Name::try_from("example.com"), Type::A, Class:IN), addr);
+    /// ```
+    pub async fn query<Q: ToQuery>(&self, query: Q, addr: SocketAddr) -> ClientResult<()> {
+        let active_ids = self.active_ids.clone();
+        let query = query.to_query();
 
-        let id = rand::random::<u16>();
-        let header = Header::new(id);
-        let mut message = Message::new_with_header(header);
+        let session = Session {
+            socket: self.socket.clone(),
+            addr,
+        };
 
-        message.add_question(Question { name, class, ty });
+        // TODO (Techassi): Pass the timeouts defined in the client
+        let result = tokio::spawn(async move {
+            do_query(
+                query,
+                session,
+                active_ids,
+                time::Duration::from_secs(2),
+                time::Duration::from_secs(2),
+            )
+            .await
+        });
 
-        let mut buf = PackBuffer::new();
-        if let Err(err) = message.pack(&mut buf) {
-            return Err(ClientError::WriteToBuf(err));
-        }
-
-        // Send DNS query to the remote DNS server
-        match timeout(
-            self.write_timeout,
-            self.socket.send_to(buf.bytes(), (addr, 53)),
-        )
-        .await
-        {
-            TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(self.write_timeout)),
-            TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
-            TimeoutResult::Ok(_) => {}
-        }
-
-        // Wait for the DNS response
-        match timeout(self.read_timeout, self.wait_for_query_response(addr)).await {
-            TimeoutResult::Timeout => Err(ClientError::ReadTimeout(self.read_timeout)),
-            TimeoutResult::Error(err) => Err(err),
-            TimeoutResult::Ok(_) => {
-                println!("{:?}", start.elapsed());
-                Ok(())
-            }
+        // TODO (Techassi): Remove transaction ID from active_ids when done
+        match result.await {
+            Ok(_) => Ok(()),
+            Err(err) => Err(ClientError::RuntimeError(err)),
         }
     }
+}
 
-    async fn wait_for_query_response(&self, remote_addr: IpAddr) -> ClientResult<()> {
-        loop {
-            self.socket.readable().await?;
+async fn do_query(
+    query: Query,
+    session: Session,
+    active_ids: Arc<HashSet<u16>>,
+    write_timeout: time::Duration,
+    read_timeout: time::Duration,
+) -> ClientResult<()> {
+    let id = get_free_transaction_id(active_ids);
 
-            let mut buf = [0u8; constants::udp::MIN_MESSAGE_SIZE];
-            let (len, addr) = match self.socket.recv_from(&mut buf).await {
-                Ok(result) => result,
-                Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
-                    // Continue when the socket.readable() call procduced a
-                    // false positive
-                    continue;
-                }
-                Err(err) => {
-                    // TODO (Techassi): Log this
-                    println!("{}", err);
-                    continue;
-                }
-            };
+    let mut message = Message::new_with_header(Header::new(id));
+    message.add_question(Question::from(query));
 
-            // Skip packets which weren't recived from the correct remote addr
-            if addr != SocketAddr::new(remote_addr, 53) {
+    let mut buf = PackBuffer::new();
+    if let Err(err) = message.pack(&mut buf) {
+        return Err(ClientError::WriteToBuf(err));
+    }
+
+    // Send DNS query to the remote DNS server
+    match timeout(
+        write_timeout,
+        session.socket.send_to(buf.bytes(), session.addr),
+    )
+    .await
+    {
+        TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(write_timeout)),
+        TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
+        TimeoutResult::Ok(_) => {}
+    }
+
+    // Wait for the DNS response
+    match timeout(read_timeout, wait_for_query_response(session)).await {
+        TimeoutResult::Timeout => Err(ClientError::ReadTimeout(read_timeout)),
+        TimeoutResult::Error(err) => Err(err),
+        TimeoutResult::Ok(_) => Ok(()),
+    }
+}
+
+async fn wait_for_query_response(session: Session) -> ClientResult<()> {
+    loop {
+        session.socket.readable().await?;
+
+        let mut buf = [0u8; constants::udp::MIN_MESSAGE_SIZE];
+        let (len, addr) = match session.socket.recv_from(&mut buf).await {
+            Ok(result) => result,
+            Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                // Continue when the socket.readable() call procduced a
+                // false positive
                 continue;
             }
-
-            match self.handle_query_response(&buf[..len]).await {
-                Ok(_) => break,
-                Err(err) => return Err(err),
+            Err(err) => {
+                // TODO (Techassi): Log this
+                println!("{}", err);
+                continue;
             }
+        };
+
+        // Skip packets which weren't recived from the correct remote addr
+        if addr != session.addr {
+            continue;
         }
 
-        Ok(())
+        match handle_query_response(&buf[..len]).await {
+            Ok(_) => break,
+            Err(err) => return Err(err),
+        }
     }
 
-    async fn handle_query_response(&self, buf: &[u8]) -> ClientResult<()> {
-        let mut buf = UnpackBuffer::new(buf);
+    Ok(())
+}
 
-        let header = Header::unpack(&mut buf)?;
-        // Check transaction ID to match. Implement fn accept::accept_as_client
+async fn handle_query_response(buf: &[u8]) -> ClientResult<()> {
+    let mut buf = UnpackBuffer::new(buf);
 
-        let message = Message::unpack(&mut buf, header)?;
+    let header = Header::unpack(&mut buf)?;
+    // Check transaction ID to match. Implement fn accept::accept_as_client
 
-        println!("{:?}", message);
+    let message = Message::unpack(&mut buf, header)?;
 
-        Ok(())
+    println!("{:?}", message);
+
+    Ok(())
+}
+
+fn get_free_transaction_id(active_ids: Arc<HashSet<u16>>) -> u16 {
+    let mut id = rand::random::<u16>();
+
+    // Reroll until we get a free transaction ID
+    while active_ids.contains(&id) {
+        id = rand::random::<u16>();
     }
+
+    id
 }
 
 pub struct ClientBuilder {
@@ -174,11 +218,10 @@ impl ClientBuilder {
 
         Ok(Client {
             network: self.network,
-            bind_timeout: self.bind_timeout,
             read_timeout: self.read_timeout,
             write_timeout: self.write_timeout,
-            header_id: 1,
-            socket,
+            socket: Arc::new(socket),
+            active_ids: Arc::new(HashSet::new()),
         })
     }
 

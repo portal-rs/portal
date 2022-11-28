@@ -1,6 +1,7 @@
 use std::time;
 
 use thiserror::Error;
+use tokio::task::JoinError;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
@@ -21,4 +22,7 @@ pub enum ClientError {
 
     #[error("Reading from socket timed out after {0:?}")]
     ReadTimeout(time::Duration),
+
+    #[error("Runtime error: {0}")]
+    RuntimeError(#[from] JoinError),
 }
