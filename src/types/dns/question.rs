@@ -4,7 +4,7 @@ use crate::{
         PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
     },
     types::{
-        dns::Name,
+        dns::{Name, Query},
         rr::{Class, Type},
     },
 };
@@ -20,6 +20,16 @@ pub struct Question {
     pub name: Name,
     pub ty: Type,
     pub class: Class,
+}
+
+impl From<Query> for Question {
+    fn from(q: Query) -> Self {
+        Question {
+            name: q.name,
+            ty: q.ty,
+            class: q.class,
+        }
+    }
 }
 
 impl Unpackable for Question {
