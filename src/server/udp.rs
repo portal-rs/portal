@@ -1,18 +1,14 @@
-use std::{net::SocketAddr, sync::Arc};
-
-use tokio::net;
+use std::sync::Arc;
 
 use crate::{
     packing::{PackBuffer, Packable, UnpackBuffer, Unpackable},
     resolver,
     server::accept,
-    types::dns::{Header, Message},
+    types::{
+        dns::{Header, Message},
+        udp::Session,
+    },
 };
-
-pub struct Session {
-    pub socket: Arc<net::UdpSocket>,
-    pub addr: SocketAddr,
-}
 
 pub async fn handle(buf: &[u8], session: Session, res: Arc<resolver::Resolver>) {
     // Create an unpack buffer which keeps track of the offset automatically

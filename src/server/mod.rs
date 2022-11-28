@@ -5,6 +5,7 @@ use tokio::{self, net};
 use crate::{
     config, constants,
     resolver::{ResolveMode, Resolver},
+    types::udp::Session,
     utils::Network,
 };
 
@@ -110,7 +111,7 @@ impl Server {
 
             let resolver = resolver.clone();
 
-            let session = udp::Session {
+            let session = Session {
                 socket: socket.clone(),
                 addr,
             };
