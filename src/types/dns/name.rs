@@ -121,8 +121,12 @@ impl Unpackable for Name {
                     if buf.followed_pointers() {
                         buf.jump_back();
 
-                        state = NameParseState::LabelLenOrPointer;
-                        continue;
+                        // state = NameParseState::LabelLenOrPointer;
+                        // continue;
+
+                        // Should we break here? Can there be multiple nested
+                        // compression pointers?
+                        break;
                     }
 
                     // We reached the terminating null byte. Remove it from

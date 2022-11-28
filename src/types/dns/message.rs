@@ -59,6 +59,7 @@ impl Message {
 
     pub fn add_question(&mut self, question: Question) {
         self.question.push(question);
+        self.header.qdcount += 1;
     }
 
     pub fn set_answers(&mut self, answers: Vec<Record>) {

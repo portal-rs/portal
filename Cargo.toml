@@ -2,7 +2,8 @@
 members = [
   ".",
   "portal-ctl",
-  "portal-bin"
+  "portal-bin",
+  "portal-client"
 ]
 
 [package]
@@ -11,12 +12,13 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros", "time"] }
 serde = { version = "1.0.144", features = ["derive"] }
 thiserror = { workspace = true }
+tokio = { workspace = true }
 enum_dispatch = "0.3.8"
 toml = "0.5.9"
 rand = "0.8.5"
 
 [workspace.dependencies]
+tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros", "time"] }
 thiserror = "1.0.37"

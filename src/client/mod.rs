@@ -1,10 +1,14 @@
-use std::time;
+use std::{
+    net::{IpAddr, SocketAddr},
+    time,
+};
 
 use rand;
-use tokio::net::{ToSocketAddrs, UdpSocket};
+use tokio::net::UdpSocket;
 
 use crate::{
-    packing::{PackBuffer, Packable},
+    constants,
+    packing::{PackBuffer, Packable, UnpackBuffer, Unpackable},
     types::{
         dns::{Header, Message, Name, Question},
         rr::{Class, Type},
@@ -52,24 +56,16 @@ impl Client {
     }
 
     /// Sends a query to `addr` asking for `name`, `class` and `ty`.
-    ///
-    /// ### Example
-    ///
-    /// ```
-    ///
-    ///
-    ///
-    ///
-    ///
-    /// ```
     pub async fn query(
-        &mut self,
+        &self,
         name: Name,
         class: Class,
         ty: Type,
-        addr: impl ToSocketAddrs,
+        addr: IpAddr,
     ) -> ClientResult<()> {
-        let id = self.get_and_refresh_header_id();
+        let start = time::Instant::now();
+
+        let id = rand::random::<u16>();
         let header = Header::new(id);
         let mut message = Message::new_with_header(header);
 
@@ -80,21 +76,73 @@ impl Client {
             return Err(ClientError::WriteToBuf(err));
         }
 
-        match timeout(self.write_timeout, self.socket.send_to(buf.bytes(), addr)).await {
+        // Send DNS query to the remote DNS server
+        match timeout(
+            self.write_timeout,
+            self.socket.send_to(buf.bytes(), (addr, 53)),
+        )
+        .await
+        {
             TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(self.write_timeout)),
             TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
             TimeoutResult::Ok(_) => {}
         }
 
-        loop {}
+        // Wait for the DNS response
+        match timeout(self.read_timeout, self.wait_for_query_response(addr)).await {
+            TimeoutResult::Timeout => Err(ClientError::ReadTimeout(self.read_timeout)),
+            TimeoutResult::Error(err) => Err(err),
+            TimeoutResult::Ok(_) => {
+                println!("{:?}", start.elapsed());
+                Ok(())
+            }
+        }
     }
 
-    /// Gets the current header ID and generates a new random one.
-    fn get_and_refresh_header_id(&mut self) -> u16 {
-        let id = self.header_id;
-        self.header_id = rand::random::<u16>();
+    async fn wait_for_query_response(&self, remote_addr: IpAddr) -> ClientResult<()> {
+        loop {
+            self.socket.readable().await?;
 
-        return id;
+            let mut buf = [0u8; constants::udp::MIN_MESSAGE_SIZE];
+            let (len, addr) = match self.socket.recv_from(&mut buf).await {
+                Ok(result) => result,
+                Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                    // Continue when the socket.readable() call procduced a
+                    // false positive
+                    continue;
+                }
+                Err(err) => {
+                    // TODO (Techassi): Log this
+                    println!("{}", err);
+                    continue;
+                }
+            };
+
+            // Skip packets which weren't recived from the correct remote addr
+            if addr != SocketAddr::new(remote_addr, 53) {
+                continue;
+            }
+
+            match self.handle_query_response(&buf[..len]).await {
+                Ok(_) => break,
+                Err(err) => return Err(err),
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn handle_query_response(&self, buf: &[u8]) -> ClientResult<()> {
+        let mut buf = UnpackBuffer::new(buf);
+
+        let header = Header::unpack(&mut buf)?;
+        // Check transaction ID to match. Implement fn accept::accept_as_client
+
+        let message = Message::unpack(&mut buf, header)?;
+
+        println!("{:?}", message);
+
+        Ok(())
     }
 }
 
@@ -118,7 +166,7 @@ impl Default for ClientBuilder {
 
 impl ClientBuilder {
     pub async fn build(&self) -> Result<Client, ClientError> {
-        let socket = match timeout(self.bind_timeout, UdpSocket::bind("127.0.0.1:0")).await {
+        let socket = match timeout(self.bind_timeout, UdpSocket::bind("0.0.0.0:0")).await {
             TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(self.bind_timeout)),
             TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
             TimeoutResult::Ok(socket) => socket,

@@ -4,10 +4,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
-    #[error("IO error")]
+    #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
 
-    #[error("Failed to acquire mutex lock")]
+    #[error("Failed to write to buf: {0}")]
     WriteToBuf(#[from] crate::error::ProtocolError),
 
     #[error("Failed to send query message: Only send partial data")]
@@ -18,4 +18,7 @@ pub enum ClientError {
 
     #[error("Writing to socket timed out after {0:?}")]
     WriteTimeout(time::Duration),
+
+    #[error("Reading from socket timed out after {0:?}")]
+    ReadTimeout(time::Duration),
 }

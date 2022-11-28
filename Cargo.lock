@@ -207,6 +207,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "portal-client"
+version = "0.1.0"
+dependencies = [
+ "portal",
+ "tokio",
+]
+
+[[package]]
 name = "portal-ctl"
 version = "0.0.1"
 
