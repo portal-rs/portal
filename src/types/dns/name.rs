@@ -108,7 +108,7 @@ impl Unpackable for Name {
                     // Add the label to the domain name. This returns an error
                     // if the domain name length exceeds the maximum domain
                     // name length of 255
-                    if let Err(err) = name.add_label(label.into()) {
+                    if let Err(_) = name.add_label(label.into()) {
                         return Err(ProtocolError::DomainNameTooLong);
                     }
 
