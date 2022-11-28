@@ -5,7 +5,7 @@ use tokio::{self, net};
 use crate::{
     config, constants,
     resolver::{ResolveMode, Resolver},
-    utils::network::Network,
+    utils::Network,
 };
 
 mod accept;
@@ -90,16 +90,23 @@ impl Server {
         let socket = Arc::new(socket);
 
         loop {
-            let mut buf = vec![0u8; constants::udp::MIN_MESSAGE_SIZE];
+            // Wait until the socket is readable, this can produce a false positive
+            socket.readable().await?;
+
+            let mut buf = [0u8; constants::udp::MIN_MESSAGE_SIZE];
             let (len, addr) = match socket.recv_from(&mut buf).await {
                 Ok(result) => result,
+                Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                    // Continue when the socket.readable() call procduced a
+                    // false positive
+                    continue;
+                }
                 Err(err) => {
                     // TODO (Techassi): Log this
                     println!("{}", err);
                     continue;
                 }
             };
-            buf.resize(len, 0);
 
             let resolver = resolver.clone();
 
@@ -109,7 +116,7 @@ impl Server {
             };
 
             tokio::spawn(async move {
-                udp::handle(buf.as_slice(), session, resolver).await;
+                udp::handle(&buf[..len], session, resolver).await;
             });
         }
     }
