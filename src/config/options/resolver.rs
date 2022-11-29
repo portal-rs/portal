@@ -1,4 +1,4 @@
-use std::net::{AddrParseError, SocketAddr};
+use std::net::{AddrParseError, IpAddr, Ipv4Addr, SocketAddr};
 
 use serde::Deserialize;
 use thiserror::Error;
@@ -46,8 +46,14 @@ impl Default for RawResolverOptions {
 
 impl RawResolverOptions {
     pub fn validate(&self) -> Result<ResolverOptions, ResolverOptionError> {
-        let upstream: SocketAddr = self.upstream.parse()?;
         let mode: ResolveMode = self.mode.parse()?;
+
+        // Only parse the upstreqm addr when we use the forwarding resolver.
+        // Otherwise fallback to 0.0.0.0:0
+        let upstream = match mode {
+            ResolveMode::Forwarding => self.upstream.parse()?,
+            _ => SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
+        };
 
         Ok(ResolverOptions {
             upstream,
