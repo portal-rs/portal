@@ -118,14 +118,7 @@ impl Unpackable for Name {
                     // We followed one ore more compression pointers and now
                     // need to jump back to continue resolving the pointer
                     // chain
-                    if buf.followed_pointers() {
-                        buf.jump_back();
-
-                        // state = NameParseState::LabelLenOrPointer;
-                        // continue;
-
-                        // Should we break here? Can there be multiple nested
-                        // compression pointers?
+                    if buf.iter_back() {
                         break;
                     }
 
@@ -225,7 +218,7 @@ impl Name {
     }
 
     pub fn len(&self) -> usize {
-        let dots = self.labels.len();
+        let dots = self.num_labels_root();
 
         let mut labels = 0;
         self.labels.iter().for_each(|l| labels += l.0.len());

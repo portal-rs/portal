@@ -60,6 +60,11 @@ async fn handle_accept(
         Err(_) => todo!(),
     };
 
+    // NOTE (Techassi): Is this the best way to do this? We don't care about
+    // the original rdlens, but we should keep them initally if we actually
+    // need them. Normalizing them here seems the correct way until we
+    // support writing back compressed names / messages.
+    records.normalize_rdlens();
     message.add_query_result(&mut records);
     handle_response(message, session).await;
 }

@@ -56,6 +56,18 @@ impl<'a> UnpackBuffer<'a> {
         }
     }
 
+    pub fn iter_back(&mut self) -> bool {
+        if !self.followed_pointers() {
+            return false;
+        }
+
+        while self.followed_pointers() {
+            self.jump_back()
+        }
+
+        true
+    }
+
     pub fn offset(&self) -> usize {
         return self.buf.len() - self.rest.len();
     }

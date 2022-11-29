@@ -86,6 +86,11 @@ impl Record {
         self
     }
 
+    pub fn normalize_rdlen(&mut self) -> &mut Self {
+        self.header.rdlen = self.len() as u16;
+        self
+    }
+
     pub fn len(&self) -> usize {
         return self.data.len();
     }

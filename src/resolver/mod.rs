@@ -57,6 +57,20 @@ impl ToString for ResultRecords {
     }
 }
 
+impl ResultRecords {
+    pub fn normalize_rdlens(&mut self) {
+        for answer in &mut self.answers {
+            answer.normalize_rdlen();
+        }
+        for authority in &mut self.authorities {
+            authority.normalize_rdlen();
+        }
+        for additional in &mut self.additionals {
+            additional.normalize_rdlen();
+        }
+    }
+}
+
 #[async_trait]
 #[enum_dispatch(Resolver)]
 pub trait ToResolver {
