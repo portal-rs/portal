@@ -1,5 +1,9 @@
+use std::fmt::Display;
+
 use crate::{
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
     types::dns::Name,
 };
 
@@ -7,6 +11,12 @@ use crate::{
 pub struct MX {
     preference: u16,
     exchange: Name,
+}
+
+impl Display for MX {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PREF: {} EX: {}", self.preference, self.exchange)
+    }
 }
 
 impl Unpackable for MX {
@@ -18,6 +28,13 @@ impl Unpackable for MX {
             preference,
             exchange,
         })
+    }
+}
+
+impl Packable for MX {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        self.preference.pack(buf)?;
+        self.exchange.pack(buf)
     }
 }
 

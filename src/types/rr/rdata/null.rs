@@ -1,8 +1,22 @@
-use crate::packing::{UnpackBuffer, UnpackBufferResult};
+use std::fmt::Display;
+
+use crate::packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult};
 
 #[derive(Debug)]
 pub struct NULL {
     data: Vec<u8>,
+}
+
+impl Display for NULL {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.data)
+    }
+}
+
+impl Packable for NULL {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        buf.pack_vec(&mut self.data.clone())
+    }
 }
 
 impl NULL {

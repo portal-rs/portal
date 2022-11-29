@@ -1,4 +1,7 @@
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::{
+    fmt::Display,
+    net::{Ipv4Addr, Ipv6Addr},
+};
 
 use crate::{
     error::ProtocolError,
@@ -297,7 +300,7 @@ pub enum RData {
     MAILB,
     MAILA,
     ANY,
-    BOGUS,
+    UNKNOWN,
 }
 
 impl Default for RData {
@@ -306,26 +309,27 @@ impl Default for RData {
     }
 }
 
-impl ToString for RData {
-    fn to_string(&self) -> String {
+// TODO (Techassi): Implement a derive macro which auto implements Display for enums
+impl Display for RData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RData::A(a) => a.to_string(),
-            RData::NS(ns) => ns.to_string(),
-            RData::CNAME(cname) => cname.to_string(),
-            RData::SOA(soa) => soa.to_string(),
-            RData::NULL(_) => todo!(),
-            RData::PTR(_) => todo!(),
-            RData::HINFO(_) => todo!(),
-            RData::MINFO(_) => todo!(),
-            RData::MX(_) => todo!(),
-            RData::TXT(_) => todo!(),
-            RData::AAAA(aaaa) => aaaa.to_string(),
-            RData::OPT(_) => todo!(),
+            RData::A(a) => write!(f, "{}", a),
+            RData::NS(ns) => write!(f, "{}", ns),
+            RData::CNAME(cname) => write!(f, "{}", cname),
+            RData::SOA(soa) => write!(f, "{}", soa),
+            RData::NULL(null) => write!(f, "{}", null),
+            RData::PTR(ptr) => write!(f, "{}", ptr),
+            RData::HINFO(hinfo) => write!(f, "{}", hinfo),
+            RData::MINFO(minfo) => write!(f, "{}", minfo),
+            RData::MX(mx) => write!(f, "{}", mx),
+            RData::TXT(txt) => write!(f, "{}", txt),
+            RData::AAAA(aaaa) => write!(f, "{}", aaaa),
+            RData::OPT(opt) => write!(f, "{}", opt),
             RData::AXFR => todo!(),
             RData::MAILB => todo!(),
             RData::MAILA => todo!(),
             RData::ANY => todo!(),
-            RData::BOGUS => todo!(),
+            RData::UNKNOWN => todo!(),
         }
     }
 }
@@ -337,19 +341,19 @@ impl Packable for RData {
             RData::NS(ns) => ns.pack(buf),
             RData::CNAME(cname) => cname.pack(buf),
             RData::SOA(soa) => soa.pack(buf),
-            RData::NULL(_) => todo!(),
+            RData::NULL(null) => null.pack(buf),
             RData::PTR(ptr) => ptr.pack(buf),
-            RData::HINFO(_) => todo!(),
-            RData::MINFO(_) => todo!(),
-            RData::MX(_) => todo!(),
-            RData::TXT(_) => todo!(),
+            RData::HINFO(hinfo) => hinfo.pack(buf),
+            RData::MINFO(minfo) => minfo.pack(buf),
+            RData::MX(mx) => mx.pack(buf),
+            RData::TXT(txt) => txt.pack(buf),
             RData::AAAA(aaaa) => aaaa.pack(buf),
             RData::OPT(opt) => opt.pack(buf),
             RData::AXFR => todo!(),
             RData::MAILB => todo!(),
             RData::MAILA => todo!(),
             RData::ANY => todo!(),
-            RData::BOGUS => todo!(),
+            RData::UNKNOWN => todo!(),
         }
     }
 }
@@ -383,6 +387,8 @@ impl RData {
             Err(err) => return Err(err),
         };
 
+        println!("{:?} | {}", header, rdata);
+
         // Check that we read the correct number of octets defined by RDLEN
         let length_read = (buf.offset() - buf_offset_start) as u16;
         if length_read != header.rdlen {
@@ -414,7 +420,7 @@ impl RData {
             RData::MAILB => todo!(),
             RData::MAILA => todo!(),
             RData::ANY => todo!(),
-            RData::BOGUS => todo!(),
+            RData::UNKNOWN => todo!(),
         }
     }
 }

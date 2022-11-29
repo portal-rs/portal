@@ -1,11 +1,36 @@
+use std::fmt::Display;
+
 use crate::{
     constants,
-    packing::{UnpackBuffer, UnpackBufferResult},
+    packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult},
 };
 
 #[derive(Debug)]
 pub struct TXT {
     data: Vec<Vec<u8>>,
+}
+
+impl Display for TXT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.data
+                .iter()
+                .map(|v| format!("  {:?}", v))
+                .collect::<String>()
+        )
+    }
+}
+
+impl Packable for TXT {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        for s in &self.data {
+            buf.pack_character_string(s.as_slice(), constants::dns::MAX_CHAR_STRING_LENGTH)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl TXT {

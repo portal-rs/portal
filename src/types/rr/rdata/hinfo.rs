@@ -1,12 +1,22 @@
+use std::fmt::Display;
+
 use crate::{
     constants,
-    packing::{UnpackBuffer, UnpackBufferResult, Unpackable},
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
 };
 
 #[derive(Debug)]
 pub struct HINFO {
     cpu: Vec<u8>,
     os: Vec<u8>,
+}
+
+impl Display for HINFO {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CPU: {:?} OS: {:?}", self.cpu, self.os)
+    }
 }
 
 impl Unpackable for HINFO {
@@ -19,6 +29,13 @@ impl Unpackable for HINFO {
             .to_vec();
 
         Ok(Self { cpu, os })
+    }
+}
+
+impl Packable for HINFO {
+    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+        buf.pack_character_string(self.cpu.as_slice(), constants::dns::MAX_CHAR_STRING_LENGTH)?;
+        buf.pack_character_string(self.os.as_slice(), constants::dns::MAX_CHAR_STRING_LENGTH)
     }
 }
 

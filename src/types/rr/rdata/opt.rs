@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::{
     packing::{
@@ -14,6 +14,12 @@ use crate::{
 pub struct OPT {
     header: EdnsHeader,
     options: HashMap<OptionCode, Option>,
+}
+
+impl Display for OPT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl OPT {
