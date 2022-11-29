@@ -16,6 +16,7 @@ serde = { version = "1.0.144", features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 enum_dispatch = "0.3.8"
+async-trait = "0.1.58"
 toml = "0.5.9"
 rand = "0.8.5"
 
