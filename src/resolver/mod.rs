@@ -1,8 +1,10 @@
-use std::fmt;
-
+use async_trait::async_trait;
 use enum_dispatch::enum_dispatch;
 
-use crate::types::{dns::Message, rr::Record};
+use crate::types::{
+    dns::{Message, ToQuery},
+    rr::Record,
+};
 
 mod error;
 mod forwarding;
@@ -18,26 +20,36 @@ pub use recursive::*;
 
 pub type ResolveResult = Result<ResultRecords, ResolverError>;
 
+#[derive(Debug, Clone)]
 pub struct ResultRecords {
-    answer: Vec<Record>,
-    authority: Vec<Record>,
-    additional: Vec<Record>,
+    pub answers: Vec<Record>,
+    pub authorities: Vec<Record>,
+    pub additionals: Vec<Record>,
 }
 
-impl fmt::Display for ResultRecords {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
+impl From<Message> for ResultRecords {
+    fn from(msg: Message) -> Self {
+        Self {
+            answers: msg.answers,
+            authorities: msg.authorities,
+            additionals: msg.additionals,
+        }
+    }
+}
+
+impl ToString for ResultRecords {
+    fn to_string(&self) -> String {
+        format!(
             "Resolve results: \n  AN: {}\n  NS: {} \n  AR: {}",
-            self.answer
+            self.answers
                 .iter()
                 .map(|r| format!("    {}\n", r.to_string()))
                 .collect::<String>(),
-            self.authority
+            self.authorities
                 .iter()
                 .map(|r| format!("    {}\n", r.to_string()))
                 .collect::<String>(),
-            self.additional
+            self.additionals
                 .iter()
                 .map(|r| format!("    {}\n", r.to_string()))
                 .collect::<String>(),
@@ -45,13 +57,14 @@ impl fmt::Display for ResultRecords {
     }
 }
 
+#[async_trait]
 #[enum_dispatch(Resolver)]
 pub trait ToResolver {
     /// Resolve resolves a query of a DNS [`Message`] by looking up via the lookup function.
-    fn resolve(&self, message: &Message) -> ResolveResult;
-    fn resolve_raw(&self, name: String, class: u16, typ: u16) -> ResolveResult;
-    fn lookup(&self, name: String, class: u16, typ: u16) -> ResolveResult;
-    fn refresh(&self, name: String, class: u16, typ: u16);
+    async fn resolve(&self, message: &Message) -> ResolveResult;
+    async fn resolve_raw<Q: ToQuery>(&self, query: Q) -> ResolveResult;
+    // async fn lookup<Q: ToQuery>(&self, query: Q) -> ResolveResult;
+    // async fn refresh<Q: ToQuery>(&self, query: Q);
 }
 
 #[enum_dispatch]
@@ -59,20 +72,4 @@ pub enum Resolver {
     Recursive(recursive::RecursiveResolver),
     Iterative(iterative::IterativeResolver),
     Forwarding(forwarding::ForwardingResolver),
-}
-
-impl Resolver {
-    /// Create a new [`Resolver`] based on the provided [`ResolveMode`].
-    pub async fn new_from(mode: ResolveMode) -> Result<Self, ResolverError> {
-        match mode {
-            ResolveMode::Recursive => {
-                return match RecursiveResolver::new().await {
-                    Ok(resolver) => Ok(resolver.into()),
-                    Err(err) => Err(err),
-                }
-            }
-            ResolveMode::Iterative => todo!(),
-            ResolveMode::Forwarding => todo!(),
-        }
-    }
 }

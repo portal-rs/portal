@@ -1,21 +1,53 @@
-use super::ToResolver;
+use std::net::SocketAddr;
 
-pub struct ForwardingResolver {}
+use async_trait::async_trait;
 
+use crate::{
+    client::Client,
+    errors::ResolverError,
+    resolver::{ResolveResult, ResultRecords, ToResolver},
+    types::dns::{Message, ToQuery},
+};
+
+pub struct ForwardingResolver {
+    client: Client,
+    addr: SocketAddr,
+}
+
+#[async_trait]
 impl ToResolver for ForwardingResolver {
-    fn resolve(&self, message: &crate::types::dns::Message) -> super::ResolveResult {
-        todo!()
+    async fn resolve(&self, message: &Message) -> ResolveResult {
+        self.resolve_raw((
+            message.question[0].name.clone(),
+            message.question[0].ty,
+            message.question[0].class,
+        ))
+        .await
     }
 
-    fn resolve_raw(&self, name: String, class: u16, typ: u16) -> super::ResolveResult {
-        todo!()
+    async fn resolve_raw<Q: ToQuery>(&self, query: Q) -> ResolveResult {
+        match self.client.query(query, self.addr).await {
+            Ok(msg) => Ok(ResultRecords::from(msg)),
+            Err(err) => Err(ResolverError::ClientError(err)),
+        }
     }
 
-    fn lookup(&self, name: String, class: u16, typ: u16) -> super::ResolveResult {
-        todo!()
-    }
+    // async fn lookup<Q: ToQuery>(&self, query: Q) -> ResolveResult {
+    //     todo!()
+    // }
 
-    fn refresh(&self, name: String, class: u16, typ: u16) {
-        todo!()
+    // async fn refresh<Q: ToQuery>(&self, query: Q) {
+    //     todo!()
+    // }
+}
+
+impl ForwardingResolver {
+    pub async fn new(addr: SocketAddr) -> Result<Self, ResolverError> {
+        let client = match Client::new().await {
+            Ok(client) => client,
+            Err(err) => return Err(ResolverError::ClientError(err)),
+        };
+
+        Ok(Self { client, addr })
     }
 }

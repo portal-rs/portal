@@ -3,7 +3,7 @@ use crate::types::{
     rr::{Class, Type},
 };
 
-pub trait ToQuery {
+pub trait ToQuery: Send {
     fn to_query(self) -> Query;
 }
 

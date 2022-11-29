@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-pub async fn handle(buf: &[u8], session: Session, res: Arc<resolver::Resolver>) {
+pub async fn handle(buf: &[u8], session: Session, res: Arc<impl resolver::ToResolver>) {
     // Create an unpack buffer which keeps track of the offset automatically
     let mut buf = UnpackBuffer::new(buf);
 
@@ -43,7 +43,11 @@ pub async fn handle(buf: &[u8], session: Session, res: Arc<resolver::Resolver>) 
     }
 }
 
-async fn handle_accept(message: &mut Message, session: Session, res: Arc<resolver::Resolver>) {
+async fn handle_accept(
+    message: &mut Message,
+    session: Session,
+    res: Arc<impl resolver::ToResolver>,
+) {
     // TODO (Techassi): Lookup in filter engine
 
     // TODO (Techassi): Lookup in cache
@@ -51,12 +55,12 @@ async fn handle_accept(message: &mut Message, session: Session, res: Arc<resolve
     // TODO (Techassi): Look for custom DNS records
 
     // Resolve via resolver
-    // let records = match res.resolve(&message) {
-    //     Ok(recs) => recs,
-    //     Err(_) => todo!(),
-    // };
+    let mut records = match res.resolve(&message).await {
+        Ok(recs) => recs,
+        Err(_) => todo!(),
+    };
 
-    // println!("{:#?}", message);
+    message.add_query_result(&mut records);
     handle_response(message, session).await;
 }
 
@@ -66,6 +70,8 @@ async fn handle_response(message: &mut Message, session: Session) {
     // Set some response specific values in the message
     message.set_is_response(true);
     message.set_rec_avail(true);
+
+    println!("{:?}", message);
 
     if let Err(err) = message.pack(&mut buf) {
         // TODO (Techassi): Return message with RCODE 2

@@ -20,11 +20,11 @@ pub use error::*;
 pub type ClientResult<T> = Result<T, ClientError>;
 
 pub struct Client {
-    network: Network,
-    read_timeout: time::Duration,
     write_timeout: time::Duration,
-    socket: Arc<UdpSocket>,
+    read_timeout: time::Duration,
+
     active_ids: Arc<HashSet<u16>>,
+    socket: Arc<UdpSocket>,
 }
 
 // TODO (Techassi): Implement a connection struct which finally binds to a socket.
@@ -67,7 +67,7 @@ impl Client {
     ///
     /// client.query((Name::try_from("example.com"), Type::A, Class:IN), addr);
     /// ```
-    pub async fn query<Q: ToQuery>(&self, query: Q, addr: SocketAddr) -> ClientResult<()> {
+    pub async fn query<Q: ToQuery>(&self, query: Q, addr: SocketAddr) -> ClientResult<Message> {
         let active_ids = self.active_ids.clone();
         let query = query.to_query();
 
@@ -90,7 +90,10 @@ impl Client {
 
         // TODO (Techassi): Remove transaction ID from active_ids when done
         match result.await {
-            Ok(_) => Ok(()),
+            Ok(res) => match res {
+                Ok(msg) => Ok(msg),
+                Err(err) => Err(err),
+            },
             Err(err) => Err(ClientError::RuntimeError(err)),
         }
     }
@@ -102,7 +105,7 @@ async fn do_query(
     active_ids: Arc<HashSet<u16>>,
     write_timeout: time::Duration,
     read_timeout: time::Duration,
-) -> ClientResult<()> {
+) -> ClientResult<Message> {
     let id = get_free_transaction_id(active_ids);
 
     let mut message = Message::new_with_header(Header::new(id));
@@ -129,11 +132,11 @@ async fn do_query(
     match timeout(read_timeout, wait_for_query_response(session)).await {
         TimeoutResult::Timeout => Err(ClientError::ReadTimeout(read_timeout)),
         TimeoutResult::Error(err) => Err(err),
-        TimeoutResult::Ok(_) => Ok(()),
+        TimeoutResult::Ok(msg) => Ok(msg),
     }
 }
 
-async fn wait_for_query_response(session: Session) -> ClientResult<()> {
+async fn wait_for_query_response(session: Session) -> ClientResult<Message> {
     loop {
         session.socket.readable().await?;
 
@@ -158,25 +161,20 @@ async fn wait_for_query_response(session: Session) -> ClientResult<()> {
         }
 
         match handle_query_response(&buf[..len]).await {
-            Ok(_) => break,
+            Ok(msg) => return Ok(msg),
             Err(err) => return Err(err),
         }
     }
-
-    Ok(())
 }
 
-async fn handle_query_response(buf: &[u8]) -> ClientResult<()> {
+async fn handle_query_response(buf: &[u8]) -> ClientResult<Message> {
     let mut buf = UnpackBuffer::new(buf);
 
     let header = Header::unpack(&mut buf)?;
     // Check transaction ID to match. Implement fn accept::accept_as_client
-
     let message = Message::unpack(&mut buf, header)?;
 
-    println!("{:?}", message);
-
-    Ok(())
+    Ok(message)
 }
 
 fn get_free_transaction_id(active_ids: Arc<HashSet<u16>>) -> u16 {
@@ -217,7 +215,6 @@ impl ClientBuilder {
         };
 
         Ok(Client {
-            network: self.network,
             read_timeout: self.read_timeout,
             write_timeout: self.write_timeout,
             socket: Arc::new(socket),
