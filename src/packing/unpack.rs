@@ -82,7 +82,12 @@ impl<'a> UnpackBuffer<'a> {
 
     pub fn unpack_character_string(&mut self, max_len: u8) -> UnpackBufferResult<&'a [u8]> {
         let len = match self.pop() {
-            Ok(len) if len <= max_len => len,
+            Ok(len) => {
+                if len > max_len {
+                    return Err(ProtocolError::CharStringExceededMaxLen(max_len));
+                }
+                len
+            }
             _ => return Err(ProtocolError::BufTooShort),
         };
 
