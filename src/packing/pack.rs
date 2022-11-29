@@ -35,6 +35,15 @@ impl PackBuffer {
         Ok(())
     }
 
+    pub fn pack_character_string(&mut self, s: &[u8], max_len: u8) -> PackBufferResult {
+        if s.len() > max_len as usize {
+            return Err(ProtocolError::CharStringExceededMaxLen(max_len));
+        }
+
+        self.push(s.len() as u8);
+        self.pack_slice(s)
+    }
+
     pub fn bytes(&self) -> &[u8] {
         return self.buf.as_slice();
     }
