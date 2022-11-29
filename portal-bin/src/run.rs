@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::Args;
-use portal::{config::Config, server::Server};
+use portal::{config::RawConfig, server::Server};
 
 #[derive(Args)]
 pub struct Arguments {
@@ -13,13 +13,16 @@ pub struct Arguments {
 
 pub fn execute(args: Arguments) -> Result<()> {
     // Load config located at provided path or use default config
-    let cfg = match args.config_path {
-        Some(path) => Config::from_file(path, None)?,
-        None => Config::default(),
+    let raw_config = match args.config_path {
+        Some(path) => RawConfig::from_file(path)?,
+        None => RawConfig::default(),
     };
 
+    // Validate the raw config
+    let config = raw_config.validate()?;
+
     // Create and run DNS server
-    let mut srv = Server::new(cfg)?;
+    let mut srv = Server::new(config);
     srv.run()?;
 
     Ok(())

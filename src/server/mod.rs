@@ -3,8 +3,9 @@ use std::sync::Arc;
 use tokio::{self, net};
 
 use crate::{
-    config, constants,
-    resolver::{ResolveMode, Resolver},
+    config::Config,
+    constants,
+    resolver::{ForwardingResolver, RecursiveResolver, ResolveMode, Resolver},
     types::udp::Session,
     utils::Network,
 };
@@ -17,49 +18,16 @@ mod udp;
 pub use error::*;
 
 pub struct Server {
-    addr_port: std::net::SocketAddr,
-    resolve_mode: ResolveMode,
-    network: Network,
+    config: Config,
     running: bool,
 }
 
-impl Default for Server {
-    fn default() -> Self {
+impl Server {
+    pub fn new(cfg: Config) -> Self {
         Self {
-            addr_port: std::net::SocketAddr::new(
-                std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)),
-                53,
-            ),
-            resolve_mode: ResolveMode::Recursive,
-            network: Network::Tcp,
+            config: cfg,
             running: false,
         }
-    }
-}
-
-impl Server {
-    pub fn new(cfg: config::Config) -> Result<Self, ServerError> {
-        let addr_port: std::net::SocketAddr = match cfg.server.address.parse() {
-            Ok(addr) => addr,
-            Err(err) => return Err(ServerError::InvalidAddress(err.to_string())),
-        };
-
-        let network = match Network::parse(cfg.server.network) {
-            Ok(net) => net,
-            Err(err) => return Err(ServerError::InvalidNetwork(err.to_string())),
-        };
-
-        let resolve_mode = match ResolveMode::parse(cfg.resolver.mode) {
-            Ok(mode) => mode,
-            Err(err) => return Err(ServerError::InvalidResolverMode(err.to_string())),
-        };
-
-        return Ok(Self {
-            addr_port,
-            resolve_mode,
-            network,
-            running: false,
-        });
     }
 
     #[tokio::main]
@@ -70,21 +38,30 @@ impl Server {
         self.running = true;
 
         // Either start the UDP socket or TCP listener
-        match self.network {
+        match self.config.server.network {
             Network::Tcp => todo!(),
             Network::Udp => self.run_udp().await,
         }
     }
 
     async fn run_udp(&self) -> Result<(), ServerError> {
-        let socket = match net::UdpSocket::bind(self.addr_port).await {
+        let socket = match net::UdpSocket::bind(self.config.server.address).await {
             Ok(socket) => socket,
             Err(err) => return Err(ServerError::Bind(err.to_string())),
         };
 
-        let resolver = match Resolver::new_from(self.resolve_mode.clone()).await {
-            Ok(resolver) => resolver,
-            Err(_) => todo!(),
+        let resolver: Resolver = match self.config.resolver.mode {
+            ResolveMode::Recursive => match RecursiveResolver::new().await {
+                Ok(resolver) => resolver.into(),
+                Err(err) => todo!(),
+            },
+            ResolveMode::Iterative => todo!(),
+            ResolveMode::Forwarding => {
+                match ForwardingResolver::new(self.config.resolver.upstream).await {
+                    Ok(resolver) => resolver.into(),
+                    Err(_) => todo!(),
+                }
+            }
         };
 
         let resolver = Arc::new(resolver);
