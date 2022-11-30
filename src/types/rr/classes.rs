@@ -1,5 +1,10 @@
-use crate::packing::{
-    PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+use std::fmt::Display;
+
+use crate::{
+    errors::ProtocolError,
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
 };
 
 /// [`Class`] describes resource record class codes.
@@ -49,15 +54,30 @@ impl Packable for Class {
     }
 }
 
-impl ToString for Class {
-    fn to_string(&self) -> String {
+impl Display for Class {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Class::IN => String::from("IN"),
-            Class::CS => String::from("CS"),
-            Class::CH => String::from("CH"),
-            Class::HS => String::from("HS"),
-            Class::ANY => String::from("ANY"),
-            Class::UNKNOWN(c) => format!("UNKNOWN({})", c),
+            Class::IN => write!(f, "IN"),
+            Class::CS => write!(f, "CS"),
+            Class::CH => write!(f, "CH"),
+            Class::HS => write!(f, "HS"),
+            Class::ANY => write!(f, "ANY"),
+            Class::UNKNOWN(c) => write!(f, "UNKNOWN({})", c),
+        }
+    }
+}
+
+impl TryFrom<&str> for Class {
+    type Error = ProtocolError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_uppercase().as_str() {
+            "IN" => Ok(Self::IN),
+            "CS" => Ok(Self::CS),
+            "CH" => Ok(Self::CH),
+            "HS" => Ok(Self::HS),
+            "ANY" => Ok(Self::ANY),
+            _ => Err(ProtocolError::ClassParseError),
         }
     }
 }

@@ -226,7 +226,16 @@ impl Name {
         return dots + labels;
     }
 
+    /// Returns if the domain name only consists if the root "." label.
+    pub fn is_root(&self) -> bool {
+        return self.labels.len() == 0;
+    }
+
     pub fn to_dotted_string(&self) -> String {
+        if self.is_root() {
+            return String::from(".");
+        }
+
         self.labels
             .iter()
             .map(|l| {

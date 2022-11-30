@@ -17,13 +17,22 @@ pub enum ProtocolError {
     DomainNameLabelTooLong,
 
     #[error("Failed to unpack ({0})")]
-    UnpackFailure(String),
+    UnpackError(String),
 
     #[error("Failed to pack ({0})")]
-    PackFailure(String),
+    PackError(String),
 
     #[error("Domain name to long (< {})", constants::dns::MAX_DOMAIN_LENGTH)]
     DomainNameTooLong,
+
+    #[error("Character string length exceeded the provided max length of {0}")]
+    CharStringExceededMaxLen(u8),
+
+    #[error("Failed to parse RR class from string")]
+    ClassParseError,
+
+    #[error("Failed to parse RR type from string")]
+    TypeParseError,
 
     #[error("Buf too short")]
     BufTooShort,

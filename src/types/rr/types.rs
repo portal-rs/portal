@@ -1,5 +1,10 @@
-use crate::packing::{
-    PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+use std::fmt::Display;
+
+use crate::{
+    errors::ProtocolError,
+    packing::{
+        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
+    },
 };
 
 /// [`Type`] describes resource record types.
@@ -79,26 +84,53 @@ impl Packable for Type {
     }
 }
 
-impl ToString for Type {
-    fn to_string(&self) -> String {
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Type::A => String::from("A"),
-            Type::NS => String::from("NS"),
-            Type::CNAME => String::from("CNAME"),
-            Type::SOA => String::from("SOA"),
-            Type::NULL => String::from("NULL"),
-            Type::PTR => String::from("PTR"),
-            Type::HINFO => String::from("HINFO"),
-            Type::MINFO => String::from("MINFO"),
-            Type::MX => String::from("MX"),
-            Type::TXT => String::from("TXT"),
-            Type::AAAA => String::from("AAAA"),
-            Type::OPT => String::from("OPT"),
-            Type::AXFR => String::from("AXFR"),
-            Type::MAILB => String::from("MAILB"),
-            Type::MAILA => String::from("MAILA"),
-            Type::ANY => String::from("ANY"),
-            Type::UNKNOWN(v) => format!("UNKNOWN({})", v),
+            Type::A => write!(f, "A"),
+            Type::NS => write!(f, "NS"),
+            Type::CNAME => write!(f, "CNAME"),
+            Type::SOA => write!(f, "SOA"),
+            Type::NULL => write!(f, "NULL"),
+            Type::PTR => write!(f, "PTR"),
+            Type::HINFO => write!(f, "HINFO"),
+            Type::MINFO => write!(f, "MINFO"),
+            Type::MX => write!(f, "MX"),
+            Type::TXT => write!(f, "TXT"),
+            Type::AAAA => write!(f, "AAAA"),
+            Type::OPT => write!(f, "OPT"),
+            Type::AXFR => write!(f, "AXFR"),
+            Type::MAILB => write!(f, "MAILB"),
+            Type::MAILA => write!(f, "MAILA"),
+            Type::ANY => write!(f, "ANY"),
+            Type::UNKNOWN(c) => write!(f, "UNKNOWN({})", c),
+        }
+    }
+}
+
+impl TryFrom<&str> for Type {
+    // TODO (Techassi): Change this to TypeParseError
+    type Error = ProtocolError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_uppercase().as_str() {
+            "A" => Ok(Self::A),
+            "NS" => Ok(Self::NS),
+            "CNAME" => Ok(Self::CNAME),
+            "SOA" => Ok(Self::SOA),
+            "NULL" => Ok(Self::NULL),
+            "PTR" => Ok(Self::PTR),
+            "HINFO" => Ok(Self::HINFO),
+            "MINFO" => Ok(Self::MINFO),
+            "MX" => Ok(Self::MX),
+            "TXT" => Ok(Self::TXT),
+            "AAAA" => Ok(Self::AAAA),
+            "OPT" => Ok(Self::OPT),
+            "AXFR" => Ok(Self::AXFR),
+            "MAILB" => Ok(Self::MAILB),
+            "MAILA" => Ok(Self::MAILA),
+            "ANY" => Ok(Self::ANY),
+            _ => Err(ProtocolError::TypeParseError),
         }
     }
 }
