@@ -72,8 +72,7 @@ impl SOA {
     /// Returns the length of the [`SOA`] record.
     pub fn len(&self) -> usize {
         // Returns the sum of MNAME's len, RNAME's len and a fixed length. The
-        // fixed part is 2 octets for the terminating null bytes and 5 x 4
-        // octets for five u32.
-        return self.mname.len() + self.rname.len() + 2 + 20;
+        // fixed part is 5 x 4 octets for five u32.
+        return self.mname.len() + self.rname.len() + 20;
     }
 }
