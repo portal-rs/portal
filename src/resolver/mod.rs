@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use async_trait::async_trait;
 use enum_dispatch::enum_dispatch;
 
@@ -37,9 +39,10 @@ impl From<Message> for ResultRecords {
     }
 }
 
-impl ToString for ResultRecords {
-    fn to_string(&self) -> String {
-        format!(
+impl Display for ResultRecords {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
             "Resolve results: \n  AN: {}\n  NS: {} \n  AR: {}",
             self.answers
                 .iter()
