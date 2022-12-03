@@ -99,18 +99,16 @@ impl Unpackable for Name {
                     // Read the label based on the label length byte. This
                     // returns an error if the label length exceeds the maximum
                     // domain name label length of 63
-                    let label = match buf.unpack_character_string(constants::dns::MAX_LABEL_LENGTH)
+                    let bytes = match buf.unpack_character_string(constants::dns::MAX_LABEL_LENGTH)
                     {
-                        Ok(label) => label,
+                        Ok(bytes) => bytes,
                         Err(_) => return Err(ProtocolError::DomainNameLabelTooLong),
                     };
 
                     // Add the label to the domain name. This returns an error
                     // if the domain name length exceeds the maximum domain
                     // name length of 255
-                    if let Err(_) = name.add_label(label.into()) {
-                        return Err(ProtocolError::DomainNameTooLong);
-                    }
+                    name.add_label(bytes.try_into()?)?;
 
                     NameParseState::LabelLenOrPointer
                 }
@@ -173,7 +171,7 @@ impl TryFrom<String> for Name {
         let parts = value.split('.');
         for part in parts {
             if part != "" {
-                name.add_label(Label::from(part.as_bytes()))?;
+                name.add_label(part.as_bytes().try_into()?)?;
             }
         }
 
@@ -191,6 +189,23 @@ impl TryFrom<&str> for Name {
 
 impl Name {
     /// Return an [`Iterator`] over the labels in the domain name.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let n = Name::try_from("www.example.com").unwrap();
+    /// let s = n.iter()
+    ///     .map(|l| {
+    ///         let mut label = l.to_string();
+    ///         label.push('.');
+    ///         label
+    ///     })
+    ///     .collect::<String>();
+    ///
+    /// assert_eq!(n.to_dotted_string(), s);
+    /// ```
     pub fn iter(&self) -> NameIterator<'_> {
         NameIterator {
             name: self,
@@ -198,9 +213,31 @@ impl Name {
         }
     }
 
+    /// Add a label to the domain. This validates the following two conditions:
+    ///
+    /// - The total length of the domain does not exceed the maximum allowed
+    ///   length [`MAX_DOMAIN_LENGTH`][constants::dns::MAX_DOMAIN_LENGTH]
+    /// - The length of the label does not exceed the maximum allowed label
+    ///   length [`MAX_LABEL_LENGTH`][constants::dns::MAX_LABEL_LENGTH]
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let mut n = Name::try_from("www.example").unwrap();
+    /// n.add_label("com".try_into()?)?;
+    ///
+    /// assert_eq!(n.to_dotted_string(), String::from("www.example.com."));
+    /// # Ok::<(), portal::errors::ProtocolError>(())
+    /// ```
     pub fn add_label(&mut self, label: Label) -> Result<(), ProtocolError> {
         if self.len() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
             return Err(ProtocolError::DomainNameTooLong);
+        }
+
+        if label.0.len() > constants::dns::MAX_LABEL_LENGTH.into() {
+            return Err(ProtocolError::DomainNameLabelTooLong);
         }
 
         self.labels.push(label);
@@ -208,15 +245,51 @@ impl Name {
     }
 
     /// Return the number of labels without the root "." label.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let n = Name::try_from("www.example.com").unwrap();
+    /// assert_eq!(n.num_labels(), 3);
+    ///
+    /// let n = Name::try_from("www.example.com.").unwrap();
+    /// assert_eq!(n.num_labels(), 3);
+    /// ```
     pub fn num_labels(&self) -> usize {
         return self.labels.len();
     }
 
     /// Return the number of labels with the root "." label.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let n = Name::try_from("www.example.com").unwrap();
+    /// assert_eq!(n.num_labels_root(), 4);
+    ///
+    /// let n = Name::try_from("www.example.com.").unwrap();
+    /// assert_eq!(n.num_labels_root(), 4);
+    /// ```
     pub fn num_labels_root(&self) -> usize {
         return self.labels.len() + 1;
     }
 
+    /// Returns the total length (in bytes) required in the wire format. This
+    /// includes the length octets between labels and the terminating null byte
+    /// (or root ".").
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let n = Name::try_from("www.example.com").unwrap();
+    /// assert_eq!(n.len(), 17);
+    /// ```
     pub fn len(&self) -> usize {
         let dots = self.num_labels_root();
 
@@ -227,17 +300,38 @@ impl Name {
     }
 
     /// Returns if the domain name only consists if the root "." label.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let n = Name::try_from(".").unwrap();
+    /// assert!(n.is_root());
+    ///
+    /// let n = Name::try_from("www.example.com").unwrap();
+    /// assert!(!n.is_root());
+    /// ```
     pub fn is_root(&self) -> bool {
         return self.labels.len() == 0;
     }
 
+    /// Returns the domain as a dotted string.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let n = Name::try_from("www.example.com").unwrap();
+    /// assert_eq!(n.to_dotted_string(), String::from("www.example.com."))
+    /// ```
     pub fn to_dotted_string(&self) -> String {
         if self.is_root() {
             return String::from(".");
         }
 
-        self.labels
-            .iter()
+        self.iter()
             .map(|l| {
                 let mut label = l.to_string();
                 label.push('.');
@@ -272,9 +366,24 @@ impl<'a> ExactSizeIterator for NameIterator<'a> {}
 #[derive(Debug, Clone)]
 pub struct Label(Vec<u8>);
 
-impl From<&[u8]> for Label {
-    fn from(bytes: &[u8]) -> Self {
-        Self(bytes.to_vec())
+impl TryFrom<&[u8]> for Label {
+    type Error = ProtocolError;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() > constants::dns::MAX_LABEL_LENGTH.into() {
+            return Err(ProtocolError::DomainNameLabelTooLong);
+        }
+
+        Ok(Self(bytes.to_vec()))
+    }
+}
+
+// TODO (Techassi): Check if the str contains any non allowed chars
+impl TryFrom<&str> for Label {
+    type Error = ProtocolError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_bytes())
     }
 }
 
