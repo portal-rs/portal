@@ -15,4 +15,5 @@ Cargo.lock
 
 # Custom
 config.local.toml
+named.root
 .cargo/
