@@ -10,7 +10,7 @@ use crate::{
         dns::{Header, Message, Query, Question, ToQuery},
         udp::Session,
     },
-    utils::{timeout, Network, TimeoutResult},
+    utils::{timeout, TimeoutResult},
 };
 
 mod error;
@@ -189,7 +189,7 @@ fn get_free_transaction_id(active_ids: Arc<HashSet<u16>>) -> u16 {
 }
 
 pub struct ClientBuilder {
-    network: Network,
+    // network: Network,
     bind_timeout: time::Duration,
     read_timeout: time::Duration,
     write_timeout: time::Duration,
@@ -198,7 +198,7 @@ pub struct ClientBuilder {
 impl Default for ClientBuilder {
     fn default() -> Self {
         Self {
-            network: Network::Udp,
+            // network: Network::Udp,
             bind_timeout: time::Duration::from_secs(2),
             read_timeout: time::Duration::from_secs(2),
             write_timeout: time::Duration::from_secs(2),
