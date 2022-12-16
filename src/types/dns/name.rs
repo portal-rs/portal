@@ -206,14 +206,26 @@ impl Name {
     ///
     /// assert_eq!(n.to_dotted_string(), s);
     /// ```
+    ///
+    /// ### Example (Reversed)
+    ///
+    /// ```
+    /// use portal::types::dns::Name;
+    ///
+    /// let n = Name::try_from("www.example.com").unwrap();
+    /// let s = n.iter().rev().map(|l| l.to_string()).collect::<String>();
+    ///
+    /// println!("{}", s);
+    /// ```
     pub fn iter(&self) -> NameIterator<'_> {
         NameIterator {
             name: self,
+            index_back: self.num_labels(),
             index: 0,
         }
     }
 
-    /// Add a label to the domain. This validates the following two conditions:
+    /// Adds a label to the domain. This validates the following two conditions:
     ///
     /// - The total length of the domain does not exceed the maximum allowed
     ///   length [`MAX_DOMAIN_LENGTH`][constants::dns::MAX_DOMAIN_LENGTH]
@@ -244,7 +256,23 @@ impl Name {
         Ok(())
     }
 
-    /// Return the number of labels without the root "." label.
+    /// Returns a reference to the underlying vector of labels with default
+    /// ordering.
+    pub fn labels(&self) -> &Vec<Label> {
+        self.labels.as_ref()
+    }
+
+    // NOTE (Techassi): We could think about storing the reverse name alongside
+    // the rest of the data. This would increase the memory footprint, but we
+    // could avoid cloning the data when calling this method.
+
+    /// Returns the underlying vector of labels in reverse order. This is
+    /// helpful when traversing a DNS tree (e.g. cache).
+    pub fn labels_rev(&self) -> Vec<Label> {
+        self.iter().rev().map(|l| l.clone()).collect()
+    }
+
+    /// Returns the number of labels without the root "." label.
     ///
     /// ### Example
     ///
@@ -294,7 +322,7 @@ impl Name {
         let dots = self.num_labels_root();
 
         let mut labels = 0;
-        self.labels.iter().for_each(|l| labels += l.0.len());
+        self.iter().for_each(|l| labels += l.0.len());
 
         return dots + labels;
     }
@@ -343,6 +371,7 @@ impl Name {
 
 pub struct NameIterator<'a> {
     name: &'a Name,
+    index_back: usize,
     index: usize,
 }
 
@@ -350,7 +379,7 @@ impl<'a> Iterator for NameIterator<'a> {
     type Item = &'a Label;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.name.len() {
+        if self.index == self.name.num_labels() {
             return None;
         }
 
@@ -361,9 +390,22 @@ impl<'a> Iterator for NameIterator<'a> {
     }
 }
 
+impl<'a> DoubleEndedIterator for NameIterator<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.index_back == 0 {
+            return None;
+        }
+
+        let current_label = self.name.labels.get(self.index_back - 1);
+        self.index_back -= 1;
+
+        return current_label;
+    }
+}
+
 impl<'a> ExactSizeIterator for NameIterator<'a> {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Label(Vec<u8>);
 
 impl TryFrom<&[u8]> for Label {
@@ -397,6 +439,10 @@ impl ToString for Label {
 }
 
 impl Label {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
     // TODO (Techassi): This idealy should not clone, but we need to introduce
     // lifetimes across Label, Name and types using Name, e.g. Question
     pub fn bytes(&self) -> Vec<u8> {
