@@ -1,5 +1,6 @@
 mod error;
 
+pub mod cache;
 pub mod client;
 pub mod config;
 pub mod constants;
