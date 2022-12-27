@@ -6,4 +6,10 @@ use crate::client::ClientError;
 pub enum ResolverError {
     #[error("Client error")]
     ClientError(#[from] ClientError),
+
+    #[error("No answer")]
+    NoAnswer,
+
+    #[error("No SOA record")]
+    NoSoaRecord,
 }

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use crate::{
     client::Client,
     errors::ResolverError,
-    resolver::{ResolveResult, ResultRecords, ToResolver},
+    resolver::{ResolveResult, ToResolver},
     types::dns::{Message, ToQuery},
 };
 
@@ -27,7 +27,7 @@ impl ToResolver for ForwardingResolver {
 
     async fn resolve_raw<Q: ToQuery>(&self, query: Q) -> ResolveResult {
         match self.client.query(query, self.addr).await {
-            Ok(msg) => Ok(ResultRecords::from(msg)),
+            Ok(msg) => Ok(msg.into()),
             Err(err) => Err(ResolverError::ClientError(err)),
         }
     }
