@@ -28,7 +28,7 @@ pub enum Class {
     ANY,
 
     /// If we receive an unknown RR class, we default back to this "class".
-    /// This can be the case when wie deal with OPT records. ENDS uses this
+    /// This can be the case when we deal with OPT records. ENDS uses this
     /// field to indicate the sender's UDP payload size instead of the class.
     /// To be able to use the value, we add the `u16` to this variant.
     UNKNOWN(u16),
