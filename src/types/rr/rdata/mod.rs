@@ -22,13 +22,13 @@ mod opt;
 mod soa;
 mod txt;
 
-use hinfo::*;
-use minfo::*;
-use mx::*;
-use null::*;
-use opt::*;
-use soa::*;
-use txt::*;
+pub use hinfo::*;
+pub use minfo::*;
+pub use mx::*;
+pub use null::*;
+pub use opt::*;
+pub use soa::*;
+pub use txt::*;
 
 #[derive(Debug)]
 pub enum RData {

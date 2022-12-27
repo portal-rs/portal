@@ -80,10 +80,18 @@ impl Record {
         self
     }
 
+    pub fn get_header(&self) -> &RHeader {
+        &self.header
+    }
+
     /// Set the [`RData`] section of the [`Record`].
     pub fn set_rdata(&mut self, rdata: RData) -> &mut Self {
         self.data = rdata;
         self
+    }
+
+    pub fn get_rdata(&self) -> &RData {
+        &self.data
     }
 
     pub fn normalize_rdlen(&mut self) -> &mut Self {
@@ -93,5 +101,13 @@ impl Record {
 
     pub fn len(&self) -> usize {
         return self.data.len();
+    }
+
+    pub fn is_edns(&self) -> bool {
+        self.header.ty == Type::OPT
+    }
+
+    pub fn is_soa(&self) -> bool {
+        self.header.ty == Type::SOA
     }
 }

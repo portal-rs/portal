@@ -1,5 +1,5 @@
 use crate::types::{
-    dns::Name,
+    dns::{Message, Name},
     rr::{Class, Type},
 };
 
@@ -7,6 +7,7 @@ pub trait ToQuery: Send {
     fn to_query(self) -> Query;
 }
 
+#[derive(Clone)]
 pub struct Query {
     pub name: Name,
     pub ty: Type,
@@ -23,6 +24,16 @@ impl ToQuery for (Name, Type, Class) {
     fn to_query(self) -> Query {
         let (name, ty, class) = self;
         Query::new(name, ty, class)
+    }
+}
+
+impl ToQuery for &Message {
+    fn to_query(self) -> Query {
+        Query {
+            name: self.question[0].name.clone(),
+            ty: self.question[0].ty,
+            class: self.question[0].class,
+        }
     }
 }
 

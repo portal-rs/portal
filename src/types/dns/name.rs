@@ -21,7 +21,7 @@ impl Default for NameParseState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Name {
     labels: Vec<Label>,
 }
@@ -34,7 +34,7 @@ impl Default for Name {
 
 impl Display for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_dotted_string())
+        write!(f, "{}", self.as_dotted_string())
     }
 }
 
@@ -187,6 +187,20 @@ impl TryFrom<&str> for Name {
     }
 }
 
+impl TryFrom<&[Label]> for Name {
+    type Error = ProtocolError;
+
+    fn try_from(value: &[Label]) -> Result<Self, Self::Error> {
+        let mut name = Name::default();
+
+        for label in value {
+            name.add_label(label.clone())?
+        }
+
+        Ok(name)
+    }
+}
+
 impl Name {
     /// Return an [`Iterator`] over the labels in the domain name.
     ///
@@ -260,6 +274,23 @@ impl Name {
     /// ordering.
     pub fn labels(&self) -> &Vec<Label> {
         self.labels.as_ref()
+    }
+
+    /// Returns the domain name as fragments. For example `www.example.com`
+    /// returns `vec![com, example.com, www.example.com]`. This function
+    /// is memory and CPU heavy as we need to copy and alloocate quite a lot.
+    /// Use with caution!
+    pub fn fragments(&self) -> Vec<Name> {
+        let mut fragments: Vec<Name> = Vec::new();
+        let labels = self.labels();
+
+        for i in 0..labels.len() {
+            let parts = &labels[labels.len() - i - 1..labels.len()];
+            let name = Self::try_from(parts).unwrap_or(Name::default());
+            fragments.push(name)
+        }
+
+        fragments
     }
 
     // NOTE (Techassi): We could think about storing the reverse name alongside
@@ -352,9 +383,9 @@ impl Name {
     /// use portal::types::dns::Name;
     ///
     /// let n = Name::try_from("www.example.com").unwrap();
-    /// assert_eq!(n.to_dotted_string(), String::from("www.example.com."))
+    /// assert_eq!(n.as_dotted_string(), String::from("www.example.com."))
     /// ```
-    pub fn to_dotted_string(&self) -> String {
+    pub fn as_dotted_string(&self) -> String {
         if self.is_root() {
             return String::from(".");
         }

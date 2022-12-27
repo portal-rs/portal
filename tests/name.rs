@@ -28,3 +28,19 @@ fn test_name_iter_rev() {
         .collect::<String>();
     assert_eq!(s, String::from(".com.example.www"))
 }
+
+#[test]
+fn test_name_fragments() {
+    let n = Name::try_from("www.example.com").unwrap();
+    let f = n.fragments();
+
+    assert_eq!(f.len(), 3);
+    assert_eq!(
+        f,
+        vec![
+            Name::try_from("com").unwrap(),
+            Name::try_from("example.com").unwrap(),
+            Name::try_from("www.example.com").unwrap()
+        ]
+    )
+}

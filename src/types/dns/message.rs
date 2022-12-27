@@ -4,7 +4,7 @@ use crate::{
         PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
     },
     resolver::ResultRecords,
-    types::rr::Record,
+    types::rr::{RData, Record, SOA},
 };
 
 use super::{Header, Question};
@@ -211,6 +211,44 @@ impl Message {
         }
 
         return len;
+    }
+
+    /// Returns if the message contains any SOA RRs in the authorative
+    /// section.
+    pub fn is_soa(&self) -> bool {
+        for record in &self.authorities {
+            if record.is_soa() {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    pub fn get_soa_record(&self) -> Option<&SOA> {
+        for record in &self.authorities {
+            match record.get_rdata() {
+                RData::SOA(soa) => return Some(soa),
+                _ => continue,
+            };
+
+            // cast_or!(record.get_rdata(), RData::SOA, continue);
+        }
+
+        return None;
+    }
+
+    /// Returns if the message contains any EDNS options stored in OPT records.
+    /// This functions looks at records in the additional section from the
+    /// back, because the OPT RRs are usually at the end of this section.
+    pub fn is_edns(&self) -> bool {
+        for record in self.additionals.iter().rev() {
+            if record.is_edns() {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// Unpack the complete DNS [`Message`] based on the already unpacked [`Header`].

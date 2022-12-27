@@ -75,4 +75,8 @@ impl SOA {
         // fixed part is 5 x 4 octets for five u32.
         return self.mname.len() + self.rname.len() + 20;
     }
+
+    pub fn get_mname(&self) -> &Name {
+        &self.mname
+    }
 }

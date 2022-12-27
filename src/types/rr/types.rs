@@ -9,7 +9,7 @@ use crate::{
 
 /// [`Type`] describes resource record types.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Type {
     /// A host address
     A,
