@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-use crate::types::{
-    dns::{Label, Name},
-    rr::Record,
-};
+use crate::types::dns::{Label, Name};
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -14,11 +11,11 @@ pub enum TreeError {
 }
 
 #[derive(Debug)]
-pub struct Tree {
-    nodes: Vec<Node>,
+pub struct Tree<T> {
+    nodes: Vec<Node<T>>,
 }
 
-impl Tree {
+impl<T> Tree<T> {
     pub fn new() -> Self {
         Self {
             nodes: vec![Node {
@@ -43,7 +40,7 @@ impl Tree {
         index
     }
 
-    pub fn insert(&mut self, name: Name, data: &mut Vec<Record>) -> Result<(), TreeError> {
+    pub fn insert(&mut self, name: Name, data: &mut Vec<T>) -> Result<(), TreeError> {
         let labels = name.labels_rev();
         let mut current = 0;
 
@@ -78,34 +75,34 @@ impl Tree {
         Some(current)
     }
 
-    pub fn find_node(&self, name: Name) -> Option<&Node> {
+    pub fn find_node(&self, name: Name) -> Option<&Node<T>> {
         let index = self.find_index(name)?;
         self.find_node_by_index(index)
     }
 
-    pub fn find_node_by_index(&self, index: usize) -> Option<&Node> {
+    pub fn find_node_by_index(&self, index: usize) -> Option<&Node<T>> {
         self.nodes.get(index)
     }
 
-    pub fn find_node_by_index_mut(&mut self, index: usize) -> Option<&mut Node> {
+    pub fn find_node_by_index_mut(&mut self, index: usize) -> Option<&mut Node<T>> {
         self.nodes.get_mut(index)
     }
 }
 
 #[derive(Debug)]
-pub struct Node {
+pub struct Node<T> {
     index: usize,
     parent: Option<usize>,
     nodes: HashMap<Label, usize>,
-    data: Vec<Record>,
+    data: Vec<T>,
 }
 
-impl Node {
+impl<T> Node<T> {
     fn add_child_node(&mut self, label: Label, index: usize) {
         self.nodes.insert(label, index);
     }
 
-    fn add_data(&mut self, data: &mut Vec<Record>) {
+    fn add_data(&mut self, data: &mut Vec<T>) {
         self.data.append(data)
     }
 }
