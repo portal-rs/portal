@@ -17,12 +17,13 @@ pub struct ForwardingResolver {
 #[async_trait]
 impl ToResolver for ForwardingResolver {
     async fn resolve(&self, message: &Message) -> ResolveResult {
-        self.resolve_raw((
-            message.question[0].name.clone(),
-            message.question[0].ty,
-            message.question[0].class,
-        ))
-        .await
+        let question = match message.question() {
+            Some(q) => q,
+            None => return Err(ResolverError::NoQuestion),
+        };
+
+        self.resolve_raw((question.name.clone(), question.ty, question.class))
+            .await
     }
 
     async fn resolve_raw<Q: ToQuery>(&self, query: Q) -> ResolveResult {
