@@ -7,7 +7,7 @@ mod cookie;
 
 use cookie::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum OptionData {
     COOKIE(COOKIE),
 }

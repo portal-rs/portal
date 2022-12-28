@@ -30,7 +30,7 @@ pub use opt::*;
 pub use soa::*;
 pub use txt::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RData {
     /// ```text
     /// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -362,17 +362,17 @@ impl RData {
     pub fn unpack(buf: &mut UnpackBuffer, header: &RHeader) -> UnpackBufferResult<Self> {
         let buf_offset_start = buf.offset();
 
-        let result = match header.ty {
+        let result = match header.ty() {
             Type::A => Ipv4Addr::unpack(buf).map(Self::A),
             Type::NS => Name::unpack(buf).map(Self::NS),
             Type::CNAME => Name::unpack(buf).map(Self::CNAME),
             Type::SOA => SOA::unpack(buf).map(Self::SOA),
-            Type::NULL => NULL::unpack(buf, header.rdlen).map(Self::NULL),
+            Type::NULL => NULL::unpack(buf, header.rdlen()).map(Self::NULL),
             Type::PTR => Name::unpack(buf).map(Self::PTR),
             Type::HINFO => HINFO::unpack(buf).map(Self::HINFO),
             Type::MINFO => MINFO::unpack(buf).map(Self::MINFO),
             Type::MX => MX::unpack(buf).map(Self::MX),
-            Type::TXT => TXT::unpack(buf, header.rdlen).map(Self::TXT),
+            Type::TXT => TXT::unpack(buf, header.rdlen()).map(Self::TXT),
             Type::AAAA => Ipv6Addr::unpack(buf).map(Self::AAAA),
             Type::OPT => OPT::unpack(buf, header).map(Self::OPT),
             Type::AXFR => todo!(),
@@ -391,9 +391,11 @@ impl RData {
 
         // Check that we read the correct number of octets defined by RDLEN
         let length_read = (buf.offset() - buf_offset_start) as u16;
-        if length_read != header.rdlen {
+        let length_expected = header.rdlen();
+
+        if length_read != length_expected {
             return Err(ProtocolError::InvalidRDataLenRead {
-                expected: header.rdlen,
+                expected: length_expected,
                 found: length_read,
             });
         }

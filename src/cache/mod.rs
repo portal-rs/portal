@@ -24,7 +24,7 @@ impl Cache {
         for record in records {
             // TODO (Techassi): Handle this error
             let expires_at = now
-                .checked_add(Duration::from_secs(record.get_header().ttl.into()))
+                .checked_add(Duration::from_secs(record.header().ttl().into()))
                 .unwrap();
 
             cached_records.push(CachedRecord { expires_at, record })

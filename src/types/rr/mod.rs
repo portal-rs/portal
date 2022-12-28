@@ -15,7 +15,7 @@ pub use rdata::*;
 pub use rheader::*;
 pub use types::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Record {
     header: RHeader,
     data: RData,
@@ -76,11 +76,11 @@ impl Record {
 
     /// Set the resource record header domain name.
     pub fn set_header_name(&mut self, name: Name) -> &mut Self {
-        self.header.name = name;
+        self.header.set_name(name);
         self
     }
 
-    pub fn get_header(&self) -> &RHeader {
+    pub fn header(&self) -> &RHeader {
         &self.header
     }
 
@@ -90,12 +90,12 @@ impl Record {
         self
     }
 
-    pub fn get_rdata(&self) -> &RData {
+    pub fn rdata(&self) -> &RData {
         &self.data
     }
 
     pub fn normalize_rdlen(&mut self) -> &mut Self {
-        self.header.rdlen = self.len() as u16;
+        self.header.set_rdlen(self.len() as u16);
         self
     }
 
@@ -104,10 +104,10 @@ impl Record {
     }
 
     pub fn is_edns(&self) -> bool {
-        self.header.ty == Type::OPT
+        *self.header.ty() == Type::OPT
     }
 
     pub fn is_soa(&self) -> bool {
-        self.header.ty == Type::SOA
+        *self.header.ty() == Type::SOA
     }
 }

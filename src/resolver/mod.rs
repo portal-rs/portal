@@ -10,13 +10,13 @@ use crate::types::{
 
 mod error;
 mod forwarding;
-mod iterative;
+// mod iterative;
 mod mode;
 mod recursive;
 
 pub use error::*;
 pub use forwarding::*;
-pub use iterative::*;
+// pub use iterative::*;
 pub use mode::*;
 pub use recursive::*;
 
@@ -32,9 +32,9 @@ pub struct ResultRecords {
 impl From<Message> for ResultRecords {
     fn from(msg: Message) -> Self {
         Self {
-            answers: msg.answers,
-            authorities: msg.authorities,
-            additionals: msg.additionals,
+            answers: msg.answers().clone(),
+            authorities: msg.authorities().clone(),
+            additionals: msg.additionals().clone(),
         }
     }
 }
@@ -87,6 +87,6 @@ pub trait ToResolver {
 #[enum_dispatch]
 pub enum Resolver {
     Recursive(recursive::RecursiveResolver),
-    Iterative(iterative::IterativeResolver),
+    // Iterative(iterative::IterativeResolver),
     Forwarding(forwarding::ForwardingResolver),
 }

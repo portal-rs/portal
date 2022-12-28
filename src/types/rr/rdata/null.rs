@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NULL {
     data: Vec<u8>,
 }

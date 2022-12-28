@@ -15,7 +15,7 @@ use crate::{
 /// ### Further information
 ///
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.2
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Question {
     pub name: Name,
     pub ty: Type,

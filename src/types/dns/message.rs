@@ -13,11 +13,11 @@ use super::{Header, Question};
 /// Section 4. See https://datatracker.ietf.org/doc/html/rfc1035#section-4
 #[derive(Debug)]
 pub struct Message {
-    pub header: Header,
-    pub question: Vec<Question>,
-    pub answers: Vec<Record>,
-    pub authorities: Vec<Record>,
-    pub additionals: Vec<Record>,
+    header: Header,
+    question: Vec<Question>,
+    answers: Vec<Record>,
+    authorities: Vec<Record>,
+    additionals: Vec<Record>,
 }
 
 impl Default for Message {
@@ -67,6 +67,25 @@ impl Message {
         self.question = questions;
     }
 
+    /// Adds one question to the question section and updates the QDCOUNT in
+    /// the DNS header.
+    pub fn add_question(&mut self, question: Question) {
+        self.question.push(question);
+        self.header.qdcount += 1;
+    }
+
+    pub fn question(&self) -> Option<&Question> {
+        if self.question.len() > 0 {
+            return Some(&self.question[0]);
+        }
+        return None;
+    }
+
+    /// Returns a reference to the list of questions.
+    pub fn questions(&self) -> &Vec<Question> {
+        &self.question
+    }
+
     /// Set the vector of answer records to the provided one. This does
     /// **NOT** update the ANCOUNT in the DNS header. This method is only
     /// usable within the library it self, as this is potentialy dangerous
@@ -78,39 +97,6 @@ impl Message {
     /// - [`Message::add_questions`](Message#method.add_questions)
     pub(crate) fn set_answers(&mut self, answers: Vec<Record>) {
         self.answers = answers;
-    }
-
-    /// Set the vector of authority records to the provided one. This does
-    /// **NOT** update the NSCOUNT in the DNS header. This method is only
-    /// usable within the library it self, as this is potentialy dangerous
-    /// and/or can cause faulty behaviour.
-    ///
-    /// To instead correctly update the NSCOUNT use the methods:
-    ///
-    /// - [`Message::add_authority`](Message#method.add_authority)
-    /// - [`Message::add_authorities`](Message#method.add_authorities)
-    pub(crate) fn set_authorities(&mut self, authorities: Vec<Record>) {
-        self.authorities = authorities;
-    }
-
-    /// Set the vector of additional records to the provided one. This does
-    /// **NOT** update the ARCOUNT in the DNS header. This method is only
-    /// usable within the library it self, as this is potentialy dangerous
-    /// and/or can cause faulty behaviour.
-    ///
-    /// To instead correctly update the ARCOUNT use the methods:
-    ///
-    /// - [`Message::add_additional`](Message#method.add_additional)
-    /// - [`Message::add_additionals`](Message#method.add_additionals)
-    pub fn set_additionals(&mut self, additionals: Vec<Record>) {
-        self.additionals = additionals;
-    }
-
-    /// Adds one question to the question section and updates the QDCOUNT in
-    /// the DNS header.
-    pub fn add_question(&mut self, question: Question) {
-        self.question.push(question);
-        self.header.qdcount += 1;
     }
 
     /// Adds one answer to the answer section and updates the ANCOUNT in the
@@ -127,6 +113,24 @@ impl Message {
         self.answers.append(answers);
     }
 
+    /// Returns a reference to the list of RRs in the answer section.
+    pub fn answers(&self) -> &Vec<Record> {
+        &self.answers
+    }
+
+    /// Set the vector of authority records to the provided one. This does
+    /// **NOT** update the NSCOUNT in the DNS header. This method is only
+    /// usable within the library it self, as this is potentialy dangerous
+    /// and/or can cause faulty behaviour.
+    ///
+    /// To instead correctly update the NSCOUNT use the methods:
+    ///
+    /// - [`Message::add_authority`](Message#method.add_authority)
+    /// - [`Message::add_authorities`](Message#method.add_authorities)
+    pub(crate) fn set_authorities(&mut self, authorities: Vec<Record>) {
+        self.authorities = authorities;
+    }
+
     /// Adds one authority record to the authority section and updates the
     /// NSCOUNT in the DNS header.
     pub fn add_authority(&mut self, authority: Record) {
@@ -141,6 +145,24 @@ impl Message {
         self.authorities.append(authorities);
     }
 
+    /// Returns a reference to the list of RRs in the authority section.
+    pub fn authorities(&self) -> &Vec<Record> {
+        &self.authorities
+    }
+
+    /// Set the vector of additional records to the provided one. This does
+    /// **NOT** update the ARCOUNT in the DNS header. This method is only
+    /// usable within the library it self, as this is potentialy dangerous
+    /// and/or can cause faulty behaviour.
+    ///
+    /// To instead correctly update the ARCOUNT use the methods:
+    ///
+    /// - [`Message::add_additional`](Message#method.add_additional)
+    /// - [`Message::add_additionals`](Message#method.add_additionals)
+    pub fn set_additionals(&mut self, additionals: Vec<Record>) {
+        self.additionals = additionals;
+    }
+
     /// Adds one additional record to the additional section and updates the
     /// ARCOUNT in the DNS header.
     pub fn add_additional(&mut self, additional: Record) {
@@ -153,6 +175,11 @@ impl Message {
     pub fn add_additionals(&mut self, additionals: &mut Vec<Record>) {
         self.header.arcount += additionals.len() as u16;
         self.additionals.append(additionals);
+    }
+
+    /// Returns a reference to the list of RRs in the additional section.
+    pub fn additionals(&self) -> &Vec<Record> {
+        &self.additionals
     }
 
     /// Add all result records from a query to the correct RR sections. This
@@ -227,7 +254,7 @@ impl Message {
 
     pub fn get_soa_record(&self) -> Option<&SOA> {
         for record in &self.authorities {
-            match record.get_rdata() {
+            match record.rdata() {
                 RData::SOA(soa) => return Some(soa),
                 _ => continue,
             };

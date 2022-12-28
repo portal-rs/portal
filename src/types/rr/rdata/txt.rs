@@ -5,7 +5,7 @@ use crate::{
     packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TXT {
     data: Vec<Vec<u8>>,
 }

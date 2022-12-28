@@ -8,13 +8,13 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RHeader {
-    pub name: Name,
-    pub ty: Type,
-    pub class: Class,
-    pub ttl: u32,
-    pub rdlen: u16,
+    name: Name,
+    ty: Type,
+    class: Class,
+    ttl: u32,
+    rdlen: u16,
 }
 
 impl Default for RHeader {
@@ -67,5 +67,47 @@ impl Packable for RHeader {
         self.class.pack(buf)?;
         self.ttl.pack(buf)?;
         self.rdlen.pack(buf)
+    }
+}
+
+impl RHeader {
+    pub fn name(&self) -> &Name {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: Name) {
+        self.name = name
+    }
+
+    pub fn ty(&self) -> &Type {
+        &self.ty
+    }
+
+    pub fn set_ty(&mut self, ty: Type) {
+        self.ty = ty
+    }
+
+    pub fn class(&self) -> &Class {
+        &self.class
+    }
+
+    pub fn set_class(&mut self, class: Class) {
+        self.class = class
+    }
+
+    pub fn ttl(&self) -> u32 {
+        self.ttl
+    }
+
+    pub fn set_ttl(&mut self, ttl: u32) {
+        self.ttl = ttl
+    }
+
+    pub fn rdlen(&self) -> u16 {
+        self.rdlen
+    }
+
+    pub fn set_rdlen(&mut self, rdlen: u16) {
+        self.rdlen = rdlen
     }
 }

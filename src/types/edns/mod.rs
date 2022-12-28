@@ -10,7 +10,7 @@ pub use code::*;
 pub use data::*;
 pub use header::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Option {
     // This is redundant data. We already store the code in the map
     code: OptionCode,

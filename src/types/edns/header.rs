@@ -2,7 +2,7 @@ use crate::types::{dns::Name, rr::RHeader};
 
 /// The [`EdnsHeader`] describes the adjustments of the RR header defined in
 /// section 4 of [RFC 2671](https://datatracker.ietf.org/doc/html/rfc2671#section-4).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EdnsHeader {
     /// This will always be empty (root).
     name: Name,
@@ -61,11 +61,11 @@ pub struct EdnsHeader {
 impl From<&RHeader> for EdnsHeader {
     fn from(rheader: &RHeader) -> Self {
         Self {
-            name: rheader.name.clone(),
-            sender_payload_size: rheader.class.into(),
-            upper_ext_rcode: (rheader.ttl & 0xFF) as u8,
-            version: ((rheader.ttl << 8) & 0xFF) as u8,
-            zero: (rheader.ttl << 16) as u16,
+            name: rheader.name().clone(),
+            sender_payload_size: rheader.class().into(),
+            upper_ext_rcode: (rheader.ttl() & 0xFF) as u8,
+            version: ((rheader.ttl() << 8) & 0xFF) as u8,
+            zero: (rheader.ttl() << 16) as u16,
         }
     }
 }

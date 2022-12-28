@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OPT {
     header: EdnsHeader,
     options: HashMap<OptionCode, Option>,
@@ -29,7 +29,7 @@ impl OPT {
 
         // Setup unpacking of EDNS options
         let start_len = buf.len();
-        let rdlen = rheader.rdlen as usize;
+        let rdlen = rheader.rdlen() as usize;
         let mut options = HashMap::new();
 
         // Unpack uptions until rdlen is exhausted

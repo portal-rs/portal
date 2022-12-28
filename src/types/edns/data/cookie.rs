@@ -1,6 +1,6 @@
 use crate::packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct COOKIE {
     client: Vec<u8>,
     server: Option<Vec<u8>>,

@@ -7,7 +7,7 @@ use crate::{
     types::dns::Name,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SOA {
     mname: Name,
     rname: Name,

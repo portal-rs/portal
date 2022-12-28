@@ -7,7 +7,7 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HINFO {
     cpu: Vec<u8>,
     os: Vec<u8>,

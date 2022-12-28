@@ -7,7 +7,7 @@ use crate::{
     types::dns::Name,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MX {
     preference: u16,
     exchange: Name,

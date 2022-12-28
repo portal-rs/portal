@@ -27,12 +27,21 @@ impl ToQuery for (Name, Type, Class) {
     }
 }
 
+impl ToQuery for (&Name, &Type, &Class) {
+    fn to_query(self) -> Query {
+        let (name, ty, class) = self;
+        Query::new(name.clone(), *ty, *class)
+    }
+}
+
 impl ToQuery for &Message {
     fn to_query(self) -> Query {
+        let question = self.question().unwrap();
+
         Query {
-            name: self.question[0].name.clone(),
-            ty: self.question[0].ty,
-            class: self.question[0].class,
+            name: question.name.clone(),
+            ty: question.ty,
+            class: question.class,
         }
     }
 }
