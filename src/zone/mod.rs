@@ -2,9 +2,10 @@ use std::{fs, path::PathBuf, str::FromStr};
 
 use crate::{
     constants,
+    tree::Tree,
     types::{
         dns::Name,
-        rr::{Class, Record, Type},
+        rr::{Class, RData, Type},
     },
 };
 
@@ -38,15 +39,14 @@ impl<'a> Default for ZoneParseState<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct Zone {
-    records: Vec<Record>,
+    pub tree: Tree<ZoneRecord>,
 }
 
 impl Default for Zone {
     fn default() -> Self {
-        Self {
-            records: Default::default(),
-        }
+        Self { tree: Tree::new() }
     }
 }
 
@@ -222,24 +222,35 @@ impl FromStr for Zone {
                         Err(err) => return Err(ZoneError::ParseError(err.to_string())),
                     };
 
-                    // The last piece of input is the RDATA.
+                    let rdata = RData::try_from_str(ty, state.parts[1])?;
 
-                    println!("{} {:?} {:?} {}", state.name, state.class, state.ttl, ty);
+                    // println!(
+                    //     "{} {:?} {:?} {} {}",
+                    //     state.name, state.class, state.ttl, ty, rdata
+                    // );
 
-                    // Now add the record to the zone
+                    // NOTE (Techassi): Can we get rid of this clone?
+                    let record = ZoneRecord {
+                        name: state.name.clone(),
+                        class: state.class,
+                        ttl: state.ttl,
+                        rdata,
+                        ty,
+                    };
+
+                    zone.tree.insert(state.name, record)?;
 
                     ZoneParseState::NewLine
                 }
             }
         }
 
-        Ok(Zone {
-            records: Vec::new(),
-        })
+        Ok(zone)
     }
 }
 
 impl Zone {
+    /// Read a zone from a master zone file.
     pub fn from_file(path: PathBuf) -> Result<Self, ZoneError> {
         let b = match fs::read_to_string(path) {
             Ok(b) => b,
@@ -253,4 +264,13 @@ impl Zone {
     pub fn to_file(&self, path: PathBuf) -> Result<(), ZoneError> {
         Ok(())
     }
+}
+
+#[derive(Debug)]
+pub struct ZoneRecord {
+    class: Option<Class>,
+    ttl: Option<u32>,
+    rdata: RData,
+    name: Name,
+    ty: Type,
 }

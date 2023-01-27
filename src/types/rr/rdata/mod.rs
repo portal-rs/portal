@@ -30,6 +30,27 @@ pub use opt::*;
 pub use soa::*;
 pub use txt::*;
 
+pub struct RDataParseError {
+    msg: String,
+    ty: Type,
+}
+
+impl Display for RDataParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Error while parsing {} record data: {}",
+            self.ty, self.msg
+        )
+    }
+}
+
+impl RDataParseError {
+    pub fn new(ty: Type, msg: String) -> Self {
+        Self { msg, ty }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum RData {
     /// ```text
@@ -401,6 +422,41 @@ impl RData {
         }
 
         Ok(rdata)
+    }
+
+    /// Tries to parse `rdata` as [`RData`].
+    pub fn try_from_str(ty: Type, rdata: &str) -> Result<Self, RDataParseError> {
+        match ty {
+            Type::A => match rdata.parse::<Ipv4Addr>() {
+                Ok(ip) => Ok(Self::A(ip)),
+                Err(err) => Err(RDataParseError::new(ty, err.to_string())),
+            },
+            Type::NS => match Name::try_from(rdata) {
+                Ok(name) => Ok(Self::NS(name)),
+                Err(err) => Err(RDataParseError::new(ty, err.to_string())),
+            },
+            Type::CNAME => match Name::try_from(rdata) {
+                Ok(name) => Ok(Self::CNAME(name)),
+                Err(err) => Err(RDataParseError::new(ty, err.to_string())),
+            },
+            Type::SOA => todo!(),
+            Type::NULL => todo!(),
+            Type::PTR => todo!(),
+            Type::HINFO => todo!(),
+            Type::MINFO => todo!(),
+            Type::MX => todo!(),
+            Type::TXT => todo!(),
+            Type::AAAA => match rdata.parse::<Ipv6Addr>() {
+                Ok(ip) => Ok(Self::AAAA(ip)),
+                Err(err) => Err(RDataParseError::new(ty, err.to_string())),
+            },
+            Type::OPT => todo!(),
+            Type::AXFR => todo!(),
+            Type::MAILB => todo!(),
+            Type::MAILA => todo!(),
+            Type::ANY => todo!(),
+            Type::UNKNOWN(_) => todo!(),
+        }
     }
 
     /// Returns the length of RDATA

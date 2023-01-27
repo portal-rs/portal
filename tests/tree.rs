@@ -17,7 +17,7 @@ fn test_tree_population() {
     let mut record = Record::new();
     record.set_rdata(RData::A(Ipv4Addr::new(127, 0, 0, 1)));
 
-    tree.insert(example_name.clone(), &mut vec![record])
+    tree.insert_multi(example_name.clone(), &mut vec![record])
         .unwrap();
 
     let example_node = tree.find_node(example_name).unwrap();

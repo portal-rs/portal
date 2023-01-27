@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::{tree::TreeError, types::rr::RDataParseError};
+
 #[derive(Debug, Error)]
 pub enum ZoneError {
     #[error("IO error: {0}")]
@@ -7,4 +9,13 @@ pub enum ZoneError {
 
     #[error("Failed to parse zone file: {0}")]
     ParseError(String),
+
+    #[error("Tree error: {0}")]
+    TreeError(#[from] TreeError),
+}
+
+impl From<RDataParseError> for ZoneError {
+    fn from(value: RDataParseError) -> Self {
+        Self::ParseError(value.to_string())
+    }
 }
