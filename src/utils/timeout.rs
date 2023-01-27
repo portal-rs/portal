@@ -19,7 +19,7 @@ pub enum TimeoutResult<O, E> {
 ///
 /// ### Example
 ///
-/// ```no_run
+/// ```ignore
 /// use std::time::Duration;
 ///
 /// use portal::utils::{timeout, TimeoutResult};

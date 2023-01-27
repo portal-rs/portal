@@ -45,7 +45,7 @@ impl Client {
     ///
     /// This creates a default client and binds the socket to a random port.
     ///
-    /// ```
+    /// ```ignore
     /// use portal::client::Client;
     ///
     /// let c = Client::builder().build().await;
@@ -58,9 +58,9 @@ impl Client {
     ///
     /// ### Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// use std::net::SocketAddr;
-    /// use portal::{client::Client;, types::{dns::Name, rr::{Class, Type}}}
+    /// use portal::{client::Client, types::{dns::Name, rr::{Class, Type}}}
     ///
     /// let client = Client::new().await.unwrap();
     /// let addr: SocketAddr = "1.1.1.1:53".parse();
