@@ -1,3 +1,5 @@
+use std::net::AddrParseError;
+
 use thiserror::Error;
 
 use crate::constants;
@@ -12,6 +14,9 @@ pub enum ProtocolError {
 
     #[error("Invalid compression pointer location")]
     InvalidPointerLocation,
+
+    #[error("Invalid byte in domain name label")]
+    InvalidOmainNameLabelByte,
 
     #[error("Domain name label too long (< {})", constants::dns::MAX_LABEL_LENGTH)]
     DomainNameLabelTooLong,
@@ -36,4 +41,7 @@ pub enum ProtocolError {
 
     #[error("Buf too short")]
     BufTooShort,
+
+    #[error("IP address parse error: {0}")]
+    AddrParseError(#[from] AddrParseError),
 }
