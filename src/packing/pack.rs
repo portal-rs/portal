@@ -2,23 +2,24 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::error::ProtocolError;
 
+pub type PackBufferResult = Result<(), ProtocolError>;
+
+#[derive(Default)]
 pub struct PackBuffer {
     buf: Vec<u8>,
 }
 
-pub type PackBufferResult = Result<(), ProtocolError>;
-
 impl PackBuffer {
     pub fn new() -> Self {
-        PackBuffer { buf: Vec::new() }
+        Self::default()
     }
 
     pub fn len(&self) -> usize {
-        return self.buf.len();
+        self.buf.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.buf.len() == 0;
+        self.buf.len() == 0
     }
 
     pub fn push(&mut self, b: u8) {

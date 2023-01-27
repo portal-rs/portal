@@ -30,11 +30,11 @@ pub struct RawServerOptions {
 
 impl Default for RawServerOptions {
     fn default() -> Self {
-        return Self {
+        Self {
             cache_enabled: true,
             address: String::from("127.0.0.1:53"),
             network: String::from("udp"),
-        };
+        }
     }
 }
 

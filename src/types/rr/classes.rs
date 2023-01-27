@@ -84,14 +84,14 @@ impl TryFrom<&str> for Class {
 
 impl From<u16> for Class {
     fn from(value: u16) -> Self {
-        return match value {
+        match value {
             1 => Self::IN,
             2 => Self::CS,
             3 => Self::CH,
             4 => Self::HS,
             255 => Self::ANY,
             _ => Self::UNKNOWN(value),
-        };
+        }
     }
 }
 

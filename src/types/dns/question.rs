@@ -56,6 +56,6 @@ impl Question {
     /// Returns the length of this [`Question`] by adding up the length of the
     /// domain name and the fixed length (QTYPE and QCLASS).
     pub fn len(&self) -> usize {
-        return self.name.len() + constants::dns::QUESTION_FIXED_LENGTH;
+        self.name.len() + constants::dns::QUESTION_FIXED_LENGTH
     }
 }

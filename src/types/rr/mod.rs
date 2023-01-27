@@ -15,28 +15,15 @@ pub use rdata::*;
 pub use rheader::*;
 pub use types::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Record {
     header: RHeader,
     data: RData,
 }
 
-impl Default for Record {
-    fn default() -> Self {
-        Self {
-            header: Default::default(),
-            data: Default::default(),
-        }
-    }
-}
-
 impl ToString for Record {
     fn to_string(&self) -> String {
-        format!(
-            "HEADER: {}\nDATA: {}",
-            self.header.to_string(),
-            self.data.to_string()
-        )
+        format!("HEADER: {}\nDATA: {}", self.header.to_string(), self.data)
     }
 }
 
@@ -100,7 +87,7 @@ impl Record {
     }
 
     pub fn len(&self) -> usize {
-        return self.data.len();
+        self.data.len()
     }
 
     pub fn is_edns(&self) -> bool {

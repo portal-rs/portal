@@ -73,7 +73,7 @@ impl SOA {
     pub fn len(&self) -> usize {
         // Returns the sum of MNAME's len, RNAME's len and a fixed length. The
         // fixed part is 5 x 4 octets for five u32.
-        return self.mname.len() + self.rname.len() + 20;
+        self.mname.len() + self.rname.len() + 20
     }
 
     pub fn get_mname(&self) -> &Name {

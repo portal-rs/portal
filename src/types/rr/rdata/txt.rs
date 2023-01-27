@@ -56,6 +56,6 @@ impl TXT {
             len += v.len()
         }
 
-        return len;
+        len
     }
 }

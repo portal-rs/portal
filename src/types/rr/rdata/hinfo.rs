@@ -41,6 +41,6 @@ impl Packable for HINFO {
 
 impl HINFO {
     pub fn len(&self) -> usize {
-        return self.cpu.len() + self.os.len();
+        self.cpu.len() + self.os.len()
     }
 }

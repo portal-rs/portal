@@ -38,10 +38,10 @@ impl Packable for Option {
 
 impl Option {
     pub fn code(&self) -> OptionCode {
-        return self.code;
+        self.code
     }
 
     pub fn len(&self) -> u16 {
-        return self.len;
+        self.len
     }
 }

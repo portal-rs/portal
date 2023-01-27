@@ -29,14 +29,11 @@ impl<'a> UnpackBuffer<'a> {
     }
 
     pub fn peek(&self) -> Option<u8> {
-        match self.rest.first() {
-            Some(b) => Some(*b),
-            None => None,
-        }
+        self.rest.first().map(|b| *b)
     }
 
     pub fn followed_pointers(&self) -> bool {
-        self.ptrs.len() > 0
+        !self.ptrs.is_empty()
     }
 
     pub fn jump_to(&mut self, index: usize) -> UnpackBufferResult<()> {
@@ -69,15 +66,15 @@ impl<'a> UnpackBuffer<'a> {
     }
 
     pub fn offset(&self) -> usize {
-        return self.buf.len() - self.rest.len();
+        self.buf.len() - self.rest.len()
     }
 
     pub fn len(&self) -> usize {
-        return self.rest.len();
+        self.rest.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.rest.len() == 0;
+        self.rest.len() == 0
     }
 
     pub fn unpack_character_string(&mut self, max_len: u8) -> UnpackBufferResult<&'a [u8]> {
@@ -101,7 +98,8 @@ impl<'a> UnpackBuffer<'a> {
 
         let (slice, rest) = self.rest.split_at(nbytes);
         self.rest = rest;
-        return Ok(slice);
+
+        Ok(slice)
     }
 
     pub fn unpack_vec(&mut self, nbytes: usize) -> UnpackBufferResult<Vec<u8>> {
@@ -121,7 +119,7 @@ impl Unpackable for u16 {
             return Ok(n);
         }
 
-        return Err(ProtocolError::BufTooShort);
+        Err(ProtocolError::BufTooShort)
     }
 }
 
@@ -132,7 +130,7 @@ impl Unpackable for u32 {
             return Ok(n);
         }
 
-        return Err(ProtocolError::BufTooShort);
+        Err(ProtocolError::BufTooShort)
     }
 }
 
@@ -143,7 +141,7 @@ impl Unpackable for u64 {
             return Ok(n);
         }
 
-        return Err(ProtocolError::BufTooShort);
+        Err(ProtocolError::BufTooShort)
     }
 }
 
@@ -157,7 +155,7 @@ impl Unpackable for u128 {
             return Ok(n);
         }
 
-        return Err(ProtocolError::BufTooShort);
+        Err(ProtocolError::BufTooShort)
     }
 }
 
@@ -168,7 +166,7 @@ impl Unpackable for Ipv4Addr {
             return Ok(ip_addr);
         }
 
-        return Err(ProtocolError::BufTooShort);
+        Err(ProtocolError::BufTooShort)
     }
 }
 
@@ -179,6 +177,6 @@ impl Unpackable for Ipv6Addr {
             return Ok(ip_addr);
         }
 
-        return Err(ProtocolError::BufTooShort);
+        Err(ProtocolError::BufTooShort)
     }
 }

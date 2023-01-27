@@ -29,5 +29,5 @@ pub async fn should_accept(header: &Header) -> Action {
         return Action::Reject;
     }
 
-    return Action::Accept;
+    Action::Accept
 }

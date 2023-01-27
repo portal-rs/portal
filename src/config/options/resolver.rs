@@ -34,13 +34,13 @@ pub struct RawResolverOptions {
 
 impl Default for RawResolverOptions {
     fn default() -> Self {
-        return Self {
+        Self {
             cache_enabled: true,
             max_expire: 300,
             hint_path: String::from(""),
             upstream: String::from(""),
             mode: String::from("r"),
-        };
+        }
     }
 }
 

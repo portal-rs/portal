@@ -42,6 +42,6 @@ impl MX {
     /// Returns the length of the [`MX`] record.
     pub fn len(&self) -> usize {
         // Returns the sum of EXCHANGE's len and 2 for PREFERENCE u16.
-        return self.exchange.len() + 2;
+        self.exchange.len() + 2
     }
 }

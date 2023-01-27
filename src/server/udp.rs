@@ -55,7 +55,7 @@ async fn handle_accept(
     // TODO (Techassi): Look for custom DNS records
 
     // Resolve via resolver
-    let mut records = match res.resolve(&message).await {
+    let mut records = match res.resolve(message).await {
         Ok(recs) => recs,
         Err(_) => todo!(),
     };

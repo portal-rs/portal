@@ -17,19 +17,13 @@ enum NameParseState {
 
 impl Default for NameParseState {
     fn default() -> Self {
-        return Self::LabelLenOrPointer;
+        Self::LabelLenOrPointer
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Name {
     labels: Vec<Label>,
-}
-
-impl Default for Name {
-    fn default() -> Self {
-        Self { labels: Vec::new() }
-    }
 }
 
 impl Display for Name {
@@ -174,12 +168,12 @@ impl TryFrom<String> for Name {
 
         let parts = value.split('.');
         for part in parts {
-            if part != "" {
+            if !part.is_empty() {
                 name.add_label(part.as_bytes().try_into()?)?;
             }
         }
 
-        return Ok(name);
+        Ok(name)
     }
 }
 
@@ -290,7 +284,7 @@ impl Name {
 
         for i in 0..labels.len() {
             let parts = &labels[labels.len() - i - 1..labels.len()];
-            let name = Self::try_from(parts).unwrap_or(Name::default());
+            let name = Self::try_from(parts).unwrap_or_default();
             fragments.push(name)
         }
 
@@ -304,7 +298,7 @@ impl Name {
     /// Returns the underlying vector of labels in reverse order. This is
     /// helpful when traversing a DNS tree (e.g. cache).
     pub fn labels_rev(&self) -> Vec<Label> {
-        self.iter().rev().map(|l| l.clone()).collect()
+        self.iter().rev().cloned().collect()
     }
 
     /// Returns the number of labels without the root "." label.
@@ -321,7 +315,7 @@ impl Name {
     /// assert_eq!(n.num_labels(), 3);
     /// ```
     pub fn num_labels(&self) -> usize {
-        return self.labels.len();
+        self.labels.len()
     }
 
     /// Return the number of labels with the root "." label.
@@ -338,7 +332,7 @@ impl Name {
     /// assert_eq!(n.num_labels_root(), 4);
     /// ```
     pub fn num_labels_root(&self) -> usize {
-        return self.labels.len() + 1;
+        self.labels.len() + 1
     }
 
     /// Returns the total length (in bytes) required in the wire format. This
@@ -359,7 +353,7 @@ impl Name {
         let mut labels = 0;
         self.iter().for_each(|l| labels += l.0.len());
 
-        return dots + labels;
+        dots + labels
     }
 
     /// Returns if the domain name only consists if the root "." label.
@@ -376,7 +370,7 @@ impl Name {
     /// assert!(!n.is_root());
     /// ```
     pub fn is_root(&self) -> bool {
-        return self.labels.len() == 0;
+        self.labels.is_empty()
     }
 
     /// Returns the domain as a dotted string.
@@ -421,7 +415,7 @@ impl<'a> Iterator for NameIterator<'a> {
         let current_label = self.name.labels.get(self.index);
         self.index += 1;
 
-        return current_label;
+        current_label
     }
 }
 
@@ -434,13 +428,13 @@ impl<'a> DoubleEndedIterator for NameIterator<'a> {
         let current_label = self.name.labels.get(self.index_back - 1);
         self.index_back -= 1;
 
-        return current_label;
+        current_label
     }
 }
 
 impl<'a> ExactSizeIterator for NameIterator<'a> {}
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Label(Vec<u8>);
 
 impl TryFrom<&[u8]> for Label {
@@ -481,17 +475,17 @@ impl ToString for Label {
 
 impl Label {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self::default()
     }
 
     // TODO (Techassi): This idealy should not clone, but we need to introduce
     // lifetimes across Label, Name and types using Name, e.g. Question
     pub fn bytes(&self) -> Vec<u8> {
-        return self.0.clone();
+        self.0.clone()
     }
 
     pub fn len(&self) -> usize {
-        return self.0.len();
+        self.0.len()
     }
 }
 

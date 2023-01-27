@@ -12,13 +12,13 @@ pub struct RawCollectorOptions {
 
 impl Default for RawCollectorOptions {
     fn default() -> Self {
-        return Self {
+        Self {
             max_entries: 1000,
             anonymize: false,
             interval: 900,
             backend: String::from("default"),
             enabled: true,
-        };
+        }
     }
 }
 

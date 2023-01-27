@@ -25,11 +25,11 @@ pub struct RawConfig {
 
 impl Default for RawConfig {
     fn default() -> Self {
-        return Self {
+        Self {
             collector: Default::default(),
             resolver: Default::default(),
             server: Default::default(),
-        };
+        }
     }
 }
 

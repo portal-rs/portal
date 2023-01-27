@@ -1,5 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use async_trait::async_trait;
+
 use crate::{
     client::{Client, ClientError},
     macros::cast_or,
@@ -9,8 +11,6 @@ use crate::{
         rr::RData,
     },
 };
-
-use async_trait::async_trait;
 
 pub struct RecursiveResolver {
     client: Client,
@@ -137,11 +137,11 @@ impl RecursiveResolver {
             }
         }
 
-        if ip_addrs.len() > 0 {
+        if !ip_addrs.is_empty() {
             return Some(ip_addrs);
         }
 
-        return None;
+        None
     }
 
     pub fn hint(&self) -> IpAddr {

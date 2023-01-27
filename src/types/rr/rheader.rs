@@ -8,7 +8,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct RHeader {
     name: Name,
     ty: Type,
@@ -17,27 +17,11 @@ pub struct RHeader {
     rdlen: u16,
 }
 
-impl Default for RHeader {
-    fn default() -> Self {
-        Self {
-            name: Default::default(),
-            ty: Default::default(),
-            class: Default::default(),
-            ttl: Default::default(),
-            rdlen: Default::default(),
-        }
-    }
-}
-
 impl ToString for RHeader {
     fn to_string(&self) -> String {
         format!(
             "N: {} T: {} C: {} TTL: {} ({})",
-            self.name.to_string(),
-            self.ty.to_string(),
-            self.class.to_string(),
-            self.ttl,
-            self.rdlen
+            self.name, self.ty, self.class, self.ttl, self.rdlen
         )
     }
 }
@@ -71,6 +55,10 @@ impl Packable for RHeader {
 }
 
 impl RHeader {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn name(&self) -> &Name {
         &self.name
     }

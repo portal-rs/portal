@@ -44,7 +44,7 @@ impl OPT {
 
 impl Packable for OPT {
     fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        for (_, option) in &self.options {
+        for option in self.options.values() {
             option.pack(buf)?;
         }
 

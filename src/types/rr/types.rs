@@ -137,7 +137,7 @@ impl TryFrom<&str> for Type {
 
 impl From<u16> for Type {
     fn from(value: u16) -> Self {
-        return match value {
+        match value {
             1 => Self::A,
             2 => Self::NS,
             5 => Self::CNAME,
@@ -155,7 +155,7 @@ impl From<u16> for Type {
             254 => Self::MAILA,
             255 => Self::ANY,
             _ => Self::UNKNOWN(value),
-        };
+        }
     }
 }
 

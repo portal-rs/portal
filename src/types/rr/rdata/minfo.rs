@@ -37,6 +37,6 @@ impl Packable for MINFO {
 
 impl MINFO {
     pub fn len(&self) -> usize {
-        return self.rmailbx.len() + self.emailbx.len();
+        self.rmailbx.len() + self.emailbx.len()
     }
 }

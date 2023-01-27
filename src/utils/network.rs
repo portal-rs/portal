@@ -25,8 +25,8 @@ impl FromStr for Network {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "tcp" | "tcp4" | "tcp6" => return Ok(Network::Tcp),
-            "udp" | "udp4" | "udp6" => return Ok(Network::Udp),
+            "tcp" | "tcp4" | "tcp6" => Ok(Network::Tcp),
+            "udp" | "udp4" | "udp6" => Ok(Network::Udp),
             _ => Err(NetworkError { input: s.into() }),
         }
     }

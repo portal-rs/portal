@@ -11,25 +11,13 @@ use super::{Header, Question};
 
 /// [`Message`] describes a complete DNS message describes in RFC 1035
 /// Section 4. See https://datatracker.ietf.org/doc/html/rfc1035#section-4
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Message {
     header: Header,
     question: Vec<Question>,
     answers: Vec<Record>,
     authorities: Vec<Record>,
     additionals: Vec<Record>,
-}
-
-impl Default for Message {
-    fn default() -> Self {
-        Self {
-            header: Header::default(),
-            question: Vec::new(),
-            answers: Vec::new(),
-            authorities: Vec::new(),
-            additionals: Vec::new(),
-        }
-    }
 }
 
 impl Packable for Message {
@@ -48,10 +36,10 @@ impl Packable for Message {
 impl Message {
     /// Return a new default [`Message`] with the provded [`Header`] already set.
     pub fn new_with_header(header: Header) -> Self {
-        return Self {
+        Self {
             header,
             ..Default::default()
-        };
+        }
     }
 
     /// Set the vector of questions to the provided one. This does **NOT**
@@ -75,10 +63,10 @@ impl Message {
     }
 
     pub fn question(&self) -> Option<&Question> {
-        if self.question.len() > 0 {
+        if !self.question.is_empty() {
             return Some(&self.question[0]);
         }
-        return None;
+        None
     }
 
     /// Returns a reference to the list of questions.
@@ -202,22 +190,22 @@ impl Message {
 
     /// Returns QDCOUNT stored in the DNS message header.
     pub fn qdcount(&self) -> u16 {
-        return self.header.qdcount;
+        self.header.qdcount
     }
 
     /// Returns ANCOUNT stored in the DNS message header.
     pub fn ancount(&self) -> u16 {
-        return self.header.ancount;
+        self.header.ancount
     }
 
     /// Returns NSCOUNT stored in the DNS message header.
     pub fn nscount(&self) -> u16 {
-        return self.header.nscount;
+        self.header.nscount
     }
 
     /// Returns ARCOUNT stored in the DNS message header.
     pub fn arcount(&self) -> u16 {
-        return self.header.arcount;
+        self.header.arcount
     }
 
     /// Returns the length of this DNS [`Message`].
@@ -237,7 +225,7 @@ impl Message {
             len += additional.len();
         }
 
-        return len;
+        len
     }
 
     /// Returns if the message contains any SOA RRs in the authorative
@@ -249,7 +237,7 @@ impl Message {
             }
         }
 
-        return false;
+        false
     }
 
     pub fn get_soa_record(&self) -> Option<&SOA> {
@@ -262,7 +250,7 @@ impl Message {
             // cast_or!(record.get_rdata(), RData::SOA, continue);
         }
 
-        return None;
+        None
     }
 
     /// Returns if the message contains any EDNS options stored in OPT records.
@@ -275,7 +263,7 @@ impl Message {
             }
         }
 
-        return false;
+        false
     }
 
     /// Unpack the complete DNS [`Message`] based on the already unpacked [`Header`].

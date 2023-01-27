@@ -55,7 +55,7 @@ pub enum Rcode {
 
 impl From<u16> for Rcode {
     fn from(code: u16) -> Self {
-        return match code {
+        match code {
             0 => Self::NoError,
             1 => Self::FormatError,
             2 => Self::ServerFailure,
@@ -63,7 +63,7 @@ impl From<u16> for Rcode {
             4 => Self::NotImpl,
             5 => Self::Refused,
             _ => Self::Reserved,
-        };
+        }
     }
 }
 
