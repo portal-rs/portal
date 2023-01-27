@@ -168,6 +168,10 @@ impl TryFrom<String> for Name {
             return Ok(name);
         }
 
+        if !value.is_ascii() {
+            return Err(ProtocolError::InvalidOmainNameLabelByte);
+        }
+
         let parts = value.split('.');
         for part in parts {
             if part != "" {
@@ -183,7 +187,7 @@ impl TryFrom<&str> for Name {
     type Error = ProtocolError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::try_from(value.to_string())
+        Self::try_from(value.to_string().to_lowercase())
     }
 }
 
@@ -218,7 +222,7 @@ impl Name {
     ///     })
     ///     .collect::<String>();
     ///
-    /// assert_eq!(n.to_dotted_string(), s);
+    /// assert_eq!(n.as_dotted_string(), s);
     /// ```
     ///
     /// ### Example (Reversed)
@@ -254,7 +258,7 @@ impl Name {
     /// let mut n = Name::try_from("www.example").unwrap();
     /// n.add_label("com".try_into()?)?;
     ///
-    /// assert_eq!(n.to_dotted_string(), String::from("www.example.com."));
+    /// assert_eq!(n.as_dotted_string(), String::from("www.example.com."));
     /// # Ok::<(), portal::errors::ProtocolError>(())
     /// ```
     pub fn add_label(&mut self, label: Label) -> Result<(), ProtocolError> {
@@ -447,7 +451,13 @@ impl TryFrom<&[u8]> for Label {
             return Err(ProtocolError::DomainNameLabelTooLong);
         }
 
-        Ok(Self(bytes.to_vec()))
+        let bytes = bytes
+            .iter()
+            .cloned()
+            .map_while(validate_domain_name_byte)
+            .collect();
+
+        Ok(Self(bytes))
     }
 }
 
@@ -456,7 +466,7 @@ impl TryFrom<&str> for Label {
     type Error = ProtocolError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_bytes())
+        Self::try_from(value.to_lowercase().as_bytes())
     }
 }
 
@@ -482,5 +492,15 @@ impl Label {
 
     pub fn len(&self) -> usize {
         return self.0.len();
+    }
+}
+
+fn validate_domain_name_byte(byte: u8) -> Option<u8> {
+    match byte {
+        45 => Some(byte),           // Hyphen
+        48..=57 => Some(byte),      // Digits
+        65..=90 => Some(byte + 32), // Uppercase letters
+        97..=122 => Some(byte),     // Lowercase letters
+        _ => None,
     }
 }
