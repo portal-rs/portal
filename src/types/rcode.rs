@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 /// [`Rcode`] describes the kind of response.
 ///
 /// ### Notes
@@ -51,6 +53,20 @@ pub enum Rcode {
     ///
     /// [h]: crate::types::edns::Header
     Reserved,
+}
+
+impl Display for Rcode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Rcode::NoError => write!(f, "NOERROR"),
+            Rcode::FormatError => write!(f, "FORMATERROR"),
+            Rcode::ServerFailure => write!(f, "SERVERFAILURE"),
+            Rcode::NameError => write!(f, "NAMEERROR"),
+            Rcode::NotImpl => write!(f, "NOTIMPLEMENTED"),
+            Rcode::Refused => write!(f, "REFUSED"),
+            Rcode::Reserved => write!(f, "RESERVED"),
+        }
+    }
 }
 
 impl From<u16> for Rcode {

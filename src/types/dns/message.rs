@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     constants,
     packing::{
@@ -18,6 +20,25 @@ pub struct Message {
     answers: Vec<Record>,
     authorities: Vec<Record>,
     additionals: Vec<Record>,
+}
+
+impl Display for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let answers: String = self.answers.iter().map(|r| format!("{r}\n")).collect();
+
+        write!(
+            f,
+            ";; ->>HEADER<<- opcode: {}, rcode: {}, id: {}\n\
+            ;; QUESTION SECTION:\n\
+            ;; {}\n\n\
+            ;; ANSWER SECTION:\n{}",
+            self.header.opcode,
+            self.header.rcode,
+            self.header.id,
+            self.question().unwrap(),
+            answers
+        )
+    }
 }
 
 impl Packable for Message {

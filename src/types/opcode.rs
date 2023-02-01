@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 /// [`Opcode`] describes the kind of query of the message.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Opcode {
@@ -5,6 +7,17 @@ pub enum Opcode {
     IQuery,
     Status,
     Reserved,
+}
+
+impl Display for Opcode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Opcode::Query => write!(f, "QUERY"),
+            Opcode::IQuery => write!(f, "IQUERY"),
+            Opcode::Status => write!(f, "STATUS"),
+            Opcode::Reserved => write!(f, "RESERVED"),
+        }
+    }
 }
 
 impl From<u16> for Opcode {

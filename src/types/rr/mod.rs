@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     packing::{
         PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
@@ -21,9 +23,17 @@ pub struct Record {
     data: RData,
 }
 
-impl ToString for Record {
-    fn to_string(&self) -> String {
-        format!("HEADER: {}\nDATA: {}", self.header.to_string(), self.data)
+impl Display for Record {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}\t{}\t{}\t{}\t{}",
+            self.header.name(),
+            self.header.ttl(),
+            self.header.class(),
+            self.header.ty(),
+            self.rdata()
+        )
     }
 }
 
@@ -53,6 +63,13 @@ impl Packable for Record {
 impl Record {
     pub fn new() -> Self {
         Record::default()
+    }
+
+    pub fn new_with_header(header: RHeader) -> Self {
+        Self {
+            header,
+            ..Default::default()
+        }
     }
 
     /// Set the complete resource record header [`RHeader`] at once.

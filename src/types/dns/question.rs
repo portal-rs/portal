@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     constants,
     packing::{
@@ -20,6 +22,12 @@ pub struct Question {
     pub name: Name,
     pub ty: Type,
     pub class: Class,
+}
+
+impl Display for Question {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}\t{}\t{}", self.name, self.class, self.ty)
+    }
 }
 
 impl From<Query> for Question {
