@@ -18,7 +18,7 @@ pub struct ResolverOptions {
     pub upstream: SocketAddr,
     pub cache_enabled: bool,
     pub max_expire: usize,
-    pub hint_path: String,
+    pub hint_file_path: String,
     pub mode: ResolveMode,
 }
 
@@ -27,7 +27,7 @@ pub struct ResolverOptions {
 pub struct RawResolverOptions {
     pub cache_enabled: bool,
     pub max_expire: usize,
-    pub hint_path: String,
+    pub hint_file_path: String,
     pub upstream: String,
     pub mode: String,
 }
@@ -37,7 +37,7 @@ impl Default for RawResolverOptions {
         Self {
             cache_enabled: true,
             max_expire: 300,
-            hint_path: String::from(""),
+            hint_file_path: String::from(""),
             upstream: String::from(""),
             mode: String::from("r"),
         }
@@ -59,7 +59,7 @@ impl RawResolverOptions {
             upstream,
             cache_enabled: self.cache_enabled,
             max_expire: self.max_expire,
-            hint_path: self.hint_path.clone(),
+            hint_file_path: self.hint_file_path.clone(),
             mode,
         })
     }

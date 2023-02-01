@@ -22,7 +22,7 @@ pub use recursive::*;
 
 pub type ResolveResult = Result<ResultRecords, ResolverError>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ResultRecords {
     pub answers: Vec<Record>,
     pub authorities: Vec<Record>,

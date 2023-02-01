@@ -408,8 +408,6 @@ impl RData {
             Err(err) => return Err(err),
         };
 
-        println!("{:?} | {}", header, rdata);
-
         // Check that we read the correct number of octets defined by RDLEN
         let length_read = (buf.offset() - buf_offset_start) as u16;
         let length_expected = header.rdlen();

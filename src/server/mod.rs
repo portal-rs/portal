@@ -51,17 +51,15 @@ impl Server {
         };
 
         let resolver: Resolver = match self.config.resolver.mode {
-            ResolveMode::Recursive => match RecursiveResolver::new().await {
-                Ok(resolver) => resolver.into(),
-                Err(err) => todo!(),
-            },
-            ResolveMode::Iterative => todo!(),
-            ResolveMode::Forwarding => {
-                match ForwardingResolver::new(self.config.resolver.upstream).await {
-                    Ok(resolver) => resolver.into(),
-                    Err(_) => todo!(),
-                }
+            ResolveMode::Recursive => {
+                RecursiveResolver::new(self.config.resolver.hint_file_path.clone())
+                    .await?
+                    .into()
             }
+            ResolveMode::Iterative => todo!(),
+            ResolveMode::Forwarding => ForwardingResolver::new(self.config.resolver.upstream)
+                .await?
+                .into(),
         };
 
         let resolver = Arc::new(resolver);

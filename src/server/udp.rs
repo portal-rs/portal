@@ -57,7 +57,11 @@ async fn handle_accept(
     // Resolve via resolver
     let mut records = match res.resolve(message).await {
         Ok(recs) => recs,
-        Err(_) => todo!(),
+        Err(err) => {
+            println!("{err}");
+            // TODO (Techassi): Handle error
+            return;
+        }
     };
 
     // NOTE (Techassi): Is this the best way to do this? We don't care about

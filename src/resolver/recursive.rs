@@ -1,18 +1,77 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+    sync::Mutex,
+};
 
 use async_trait::async_trait;
 
 use crate::{
     client::{Client, ClientError},
-    macros::cast_or,
+    macros::{cast, cast_or},
     resolver::{ResolveResult, ResolverError, ToResolver},
     types::{
-        dns::{Message, Query, ToQuery},
-        rr::RData,
+        dns::{Message, ToQuery},
+        rr::{RData, Type},
     },
+    zone::Zone,
 };
 
+#[derive(Debug)]
+pub struct Hint {
+    ipv4_addr: Ipv4Addr,
+    ipv6_addr: Ipv6Addr,
+}
+
+impl Default for Hint {
+    fn default() -> Self {
+        Self {
+            ipv4_addr: Ipv4Addr::new(0, 0, 0, 0),
+            ipv6_addr: Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0),
+        }
+    }
+}
+
+impl From<Zone> for Vec<Hint> {
+    fn from(zone: Zone) -> Self {
+        let mut hints = Vec::new();
+
+        // Iterate through the root NS records
+        for record in zone.tree.root().records() {
+            if *record.header().ty() != Type::NS {
+                continue;
+            }
+
+            let rdata = cast!(record.rdata(), RData::NS).unwrap();
+            let ns_node = zone.tree.find_node(rdata.clone());
+
+            let mut hint = Hint::default();
+
+            // Use the NS record to find the associated A and AAAA records
+            for ns_record in ns_node.unwrap().records() {
+                let ty = *ns_record.header().ty();
+
+                if ty != Type::A && ty != Type::AAAA {
+                    continue;
+                }
+
+                // Save the IPv4 and IPv6 in the hint
+                match ns_record.rdata() {
+                    RData::A(ipv4_addr) => hint.ipv4_addr = *ipv4_addr,
+                    RData::AAAA(ipv6_addr) => hint.ipv6_addr = *ipv6_addr,
+                    _ => {}
+                }
+            }
+
+            hints.push(hint);
+        }
+
+        hints
+    }
+}
+
 pub struct RecursiveResolver {
+    hint_index: Mutex<usize>,
+    hints: Vec<Hint>,
     client: Client,
 }
 
@@ -67,15 +126,17 @@ impl ToResolver for RecursiveResolver {
             // looking up the IP address for the provided domain name. If we
             // were able to retrieve the IP, we can continue this loop with
             // the updated target IP address.
-            if message.is_soa() {
-                let soa = match message.get_soa_record() {
-                    Some(soa) => soa,
-                    None => return Err(ResolverError::NoSoaRecord),
-                };
 
-                let soa_query = Query::new(soa.get_mname().clone(), query.ty, query.class);
-                let _results = self.resolve_raw(soa_query).await?;
-            }
+            // TODO (Techassi): Add support to handle SOA records
+            // if message.is_soa() {
+            //     let soa = match message.get_soa_record() {
+            //         Some(soa) => soa,
+            //         None => return Err(ResolverError::NoSoaRecord),
+            //     };
+
+            //     let soa_query = Query::new(soa.get_mname().clone(), query.ty, query.class);
+            //     let _results = self.resolve_raw(soa_query).await?;
+            // }
 
             // At this step there should be some "glue" records. These records
             // provide NS records in the authority section. NS RRs contain a
@@ -85,33 +146,54 @@ impl ToResolver for RecursiveResolver {
             if let Some(mut ip_addrs) = self.find_glue_records(&message).await {
                 target_candidates.clear();
                 target_candidates.append(&mut ip_addrs);
+                println!("FOUND GLUE!");
+                println!("NEW TARGETS: {:#?}", target_candidates);
                 continue;
             }
 
             // The DNS server didn't provide any glue records in the additional
-            // section, bummer...
-            // We know have to look them up manually by querying the root DNS
-            // servers again.
+            // section, bummer... We know have to look them up manually by
+            // querying the root DNS servers again.
+
             // TODO (Techassi): We should query for multiple NS servers in
             // parallel
             for record in message.authorities() {
                 let ns_name = cast_or!(record.rdata(), RData::NS, continue);
                 let records = self
-                    .resolve_raw((ns_name, record.header().ty(), record.header().class()))
+                    .resolve_raw((ns_name, &Type::A, record.header().class()))
                     .await?;
+
+                if !records.answers.is_empty() {
+                    target_candidates.clear();
+
+                    for answer in records.answers {
+                        let ip_addr = cast_or!(answer.rdata(), RData::A, continue);
+                        target_candidates.push(IpAddr::V4(*ip_addr))
+                    }
+
+                    break;
+                }
             }
         }
     }
 }
 
 impl RecursiveResolver {
-    pub async fn new() -> Result<Self, ResolverError> {
+    pub async fn new(hint_file_path: String) -> Result<Self, ResolverError> {
         let client = match Client::new().await {
             Ok(client) => client,
             Err(_) => todo!(),
         };
 
-        let resolver = Self { client };
+        let zone = Zone::from_file(hint_file_path.into())?;
+        let hints: Vec<Hint> = zone.into();
+
+        let resolver = Self {
+            hint_index: Mutex::new(0),
+            client,
+            hints,
+        };
+
         Ok(resolver)
     }
 
@@ -145,6 +227,16 @@ impl RecursiveResolver {
     }
 
     pub fn hint(&self) -> IpAddr {
-        IpAddr::V4(Ipv4Addr::new(198, 41, 0, 4))
+        // TODO (Techassi): Handle the unwrapping
+        let mut hint_index = self.hint_index.lock().unwrap();
+
+        if *hint_index >= self.hints.len() {
+            *hint_index = 0;
+        }
+
+        let hint = self.hints.get(*hint_index).unwrap();
+        *hint_index += 1;
+
+        IpAddr::V4(hint.ipv4_addr)
     }
 }
