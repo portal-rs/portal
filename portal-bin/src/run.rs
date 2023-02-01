@@ -8,12 +8,12 @@ use portal::{config::RawConfig, server::Server};
 pub struct Arguments {
     /// Path to the TOML config file
     #[clap(short, long, parse(from_os_str), value_name = "FILE")]
-    config_path: Option<PathBuf>,
+    config: Option<PathBuf>,
 }
 
 pub fn execute(args: Arguments) -> Result<()> {
     // Load config located at provided path or use default config
-    let raw_config = match args.config_path {
+    let raw_config = match args.config {
         Some(path) => RawConfig::from_file(path)?,
         None => RawConfig::default(),
     };
