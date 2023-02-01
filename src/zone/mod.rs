@@ -5,7 +5,7 @@ use crate::{
     tree::Tree,
     types::{
         dns::Name,
-        rr::{Class, RData, Type},
+        rr::{Class, RData, RHeader, Record, Type},
     },
 };
 
@@ -41,7 +41,7 @@ impl<'a> Default for ZoneParseState<'a> {
 
 #[derive(Debug)]
 pub struct Zone {
-    pub tree: Tree<ZoneRecord>,
+    pub tree: Tree,
 }
 
 impl Default for Zone {
@@ -229,14 +229,14 @@ impl FromStr for Zone {
                     //     state.name, state.class, state.ttl, ty, rdata
                     // );
 
-                    // NOTE (Techassi): Can we get rid of this clone?
-                    let record = ZoneRecord {
-                        name: state.name.clone(),
-                        class: state.class,
-                        ttl: state.ttl,
-                        rdata,
-                        ty,
-                    };
+                    let mut record_header = RHeader::default();
+                    record_header.set_class(state.class.unwrap_or_default());
+                    record_header.set_ttl(state.ttl.unwrap_or_default());
+                    record_header.set_name(state.name.clone());
+                    record_header.set_ty(ty);
+
+                    let mut record = Record::new_with_header(record_header);
+                    record.set_rdata(rdata);
 
                     zone.tree.insert(state.name, record)?;
 
