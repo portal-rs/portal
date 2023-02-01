@@ -22,4 +22,5 @@ rand = "0.8.5"
 
 [workspace.dependencies]
 tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros", "time"] }
+clap = { version = "4.1.4", features = ["derive"] }
 thiserror = "1.0.37"
