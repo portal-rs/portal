@@ -25,18 +25,24 @@ pub struct Message {
 impl Display for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let answers: String = self.answers.iter().map(|r| format!("{r}\n")).collect();
+        let authority: String = self.authorities.iter().map(|r| format!("{r}\n")).collect();
+        let additional: String = self.additionals.iter().map(|r| format!("{r}\n")).collect();
 
         write!(
             f,
             ";; ->>HEADER<<- opcode: {}, rcode: {}, id: {}\n\
             ;; QUESTION SECTION:\n\
             ;; {}\n\n\
-            ;; ANSWER SECTION:\n{}",
+            ;; ANSWER SECTION:\n{}\n\
+            ;; AUTHORITY SECTION:\n{}\n\
+            ;; ADDITIONAL SECTION:\n{}",
             self.header.opcode,
             self.header.rcode,
             self.header.id,
             self.question().unwrap(),
-            answers
+            answers,
+            authority,
+            additional
         )
     }
 }

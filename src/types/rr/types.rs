@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use crate::{
     errors::ProtocolError,
@@ -108,12 +108,11 @@ impl Display for Type {
     }
 }
 
-impl TryFrom<&str> for Type {
-    // TODO (Techassi): Change this to TypeParseError
-    type Error = ProtocolError;
+impl FromStr for Type {
+    type Err = ProtocolError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value.to_uppercase().as_str() {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
             "A" => Ok(Self::A),
             "NS" => Ok(Self::NS),
             "CNAME" => Ok(Self::CNAME),
@@ -132,6 +131,15 @@ impl TryFrom<&str> for Type {
             "ANY" => Ok(Self::ANY),
             _ => Err(ProtocolError::TypeParseError),
         }
+    }
+}
+
+impl TryFrom<&str> for Type {
+    // TODO (Techassi): Change this to TypeParseError
+    type Error = ProtocolError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 

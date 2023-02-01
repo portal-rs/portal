@@ -1,7 +1,12 @@
-use std::{collections::HashSet, net::SocketAddr, sync::Arc, time};
+use std::{
+    collections::HashSet,
+    net::SocketAddr,
+    sync::Arc,
+    time::{self, Duration},
+};
 
 use rand;
-use tokio::net::UdpSocket;
+use tokio::{net::UdpSocket, time::Instant};
 
 use crate::{
     constants,
@@ -96,6 +101,31 @@ impl Client {
             },
             Err(err) => Err(ClientError::RuntimeError(err)),
         }
+    }
+
+    /// Sends a query to `addr` asking for `name`, `ty` and `class`. In addition
+    /// to `query`, we also track how long the query took and return the
+    /// duration.
+    ///
+    /// ### Example
+    ///
+    /// ```ignore
+    /// use std::net::SocketAddr;
+    /// use portal::{client::Client, types::{dns::Name, rr::{Class, Type}}}
+    ///
+    /// let client = Client::new().await.unwrap();
+    /// let addr: SocketAddr = "1.1.1.1:53".parse();
+    ///
+    /// client.query_duration((Name::try_from("example.com"), Type::A, Class:IN), addr);
+    /// ```
+    pub async fn query_duration<Q: ToQuery>(
+        &self,
+        query: Q,
+        addr: SocketAddr,
+    ) -> ClientResult<(Message, Duration)> {
+        let now = Instant::now();
+        let message = self.query(query, addr).await?;
+        Ok((message, now.elapsed()))
     }
 }
 

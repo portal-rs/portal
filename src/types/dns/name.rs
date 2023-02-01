@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use crate::{
     constants,
@@ -174,6 +174,14 @@ impl TryFrom<String> for Name {
         }
 
         Ok(name)
+    }
+}
+
+impl FromStr for Name {
+    type Err = ProtocolError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(s.to_string())
     }
 }
 
