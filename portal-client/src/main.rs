@@ -26,7 +26,7 @@ async fn main() {
         .query((name, Type::A, Class::IN), args[2].parse().unwrap())
         .await
     {
-        Ok(_) => {}
+        Ok(msg) => println!("{}", msg),
         Err(err) => panic!("{}", err),
     }
 }
