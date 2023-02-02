@@ -48,7 +48,7 @@ impl RawResolverOptions {
     pub fn validate(&self) -> Result<ResolverOptions, ResolverOptionError> {
         let mode: ResolveMode = self.mode.parse()?;
 
-        // Only parse the upstreqm addr when we use the forwarding resolver.
+        // Only parse the upstream addr when we use the forwarding resolver.
         // Otherwise fallback to 0.0.0.0:0
         let upstream = match mode {
             ResolveMode::Forwarding => self.upstream.parse()?,

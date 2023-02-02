@@ -34,7 +34,7 @@ pub enum Rcode {
     /// particular data.
     Refused,
 
-    /// (6-15) Initally reserved for future use (in RFC 1035).
+    /// (6-15) Initially reserved for future use (in RFC 1035).
     ///
     /// ### Notes
     ///

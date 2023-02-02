@@ -119,7 +119,7 @@ impl FromStr for Zone {
                     let line = line.trim();
 
                     // Split the line at ";". When there is a comment we can
-                    // savely ignore everything after the semicolon. If there
+                    // safely ignore everything after the semicolon. If there
                     // is not semicolon (parts len = 1) we can just use the
                     // line contents as is.
                     let parts: Vec<&str> = line.split(';').collect();
@@ -136,7 +136,7 @@ impl FromStr for Zone {
                         Err(err) => return Err(ZoneError::ParseError(err.to_string())),
                     };
 
-                    // For what ever bonker reasons the RFC 1035 states there
+                    // For what ever bonkers reason the RFC 1035 states there
                     // can be two forms how the RR is formatted. Either the
                     // class or TTL comes first. AND they can BOTH be optional.
                     // If the length of parts is only 3, we assume both class
@@ -264,13 +264,4 @@ impl Zone {
     pub fn to_file(&self, path: PathBuf) -> Result<(), ZoneError> {
         Ok(())
     }
-}
-
-#[derive(Debug)]
-pub struct ZoneRecord {
-    class: Option<Class>,
-    ttl: Option<u32>,
-    rdata: RData,
-    name: Name,
-    ty: Type,
 }

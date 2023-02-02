@@ -174,7 +174,7 @@ async fn wait_for_query_response(session: Session) -> ClientResult<Message> {
         let (len, addr) = match session.socket.recv_from(&mut buf).await {
             Ok(result) => result,
             Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
-                // Continue when the socket.readable() call procduced a
+                // Continue when the socket.readable() call produced a
                 // false positive
                 continue;
             }
@@ -185,7 +185,7 @@ async fn wait_for_query_response(session: Session) -> ClientResult<Message> {
             }
         };
 
-        // Skip packets which weren't recived from the correct remote addr
+        // Skip packets which weren't received from the correct remote addr
         if addr != session.addr {
             continue;
         }

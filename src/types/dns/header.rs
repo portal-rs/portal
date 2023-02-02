@@ -56,7 +56,7 @@ impl Default for Header {
 }
 
 impl Unpackable for Header {
-    /// Unpacks the first 12 octects from the DNS message. The DNS header is
+    /// Unpacks the first 12 octets from the DNS message. The DNS header is
     /// fixed in size. The function returns the [`Header`] it self and the
     /// offset (which will always be 12). This function is usually the first
     /// step in unpacking the whole message.
@@ -113,7 +113,7 @@ impl From<RawHeader> for Header {
 /// [`RawHeader`] describes the raw header data of a message directly from the wire. The data gets unpacked by splitting
 /// the message into six 16 bit (2 octet) chunks. The first chunk is just the **ID**. The second chunk **flags** carries
 /// data like QR, OPCODE, etc. which gets split up further by bit masks. The remaining four chunks contain counts for
-/// questions, answers, nameserver and additional records.
+/// questions, answers, ns and additional records.
 pub struct RawHeader {
     pub id: u16,
     pub flags: u16,

@@ -11,8 +11,9 @@ use crate::{
     },
 };
 
-/// [`Question`] describes a DNS question. The RFC allows multiple questions per message, but most DNS servers only
-/// accpet one and multiple questions often result in errors.
+/// [`Question`] describes a DNS question. The RFC allows multiple questions
+/// per message, but most DNS servers only accept one and multiple questions
+/// often result in errors.
 ///
 /// ### Further information
 ///

@@ -27,7 +27,7 @@ pub enum TimeoutResult<O, E> {
 ///
 /// let socket = match timeout(Duration::from_secs(2), UdpSocket::bind("127.0.0.1:0")).await {
 ///     TimeoutResult::Timeout => panic!("Binding UDP socket timed out"),
-///     TimeoutResult::Error(err) => panic!("An error occured: {}", err),
+///     TimeoutResult::Error(err) => panic!("An error occurred: {}", err),
 ///     TimeoutResult::Ok(socket) => socket,
 /// };
 /// ```

@@ -32,7 +32,7 @@ impl OPT {
         let rdlen = rheader.rdlen() as usize;
         let mut options = HashMap::new();
 
-        // Unpack uptions until rdlen is exhausted
+        // Unpack options until rdlen is exhausted
         while start_len - buf.len() < rdlen {
             let option = Option::unpack(buf)?;
             options.insert(option.code(), option);

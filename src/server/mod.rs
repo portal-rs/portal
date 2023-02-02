@@ -73,7 +73,7 @@ impl Server {
             let (len, addr) = match socket.recv_from(&mut buf).await {
                 Ok(result) => result,
                 Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
-                    // Continue when the socket.readable() call procduced a
+                    // Continue when the socket.readable() call produced a
                     // false positive
                     continue;
                 }

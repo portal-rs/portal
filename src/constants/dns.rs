@@ -4,7 +4,7 @@ pub const COMPRESSION_POINTER_MASK: u16 = 0x3FFF;
 /// The maximum character string length is 255 octets.
 pub const MAX_CHAR_STRING_LENGTH: u8 = 255;
 
-/// DNS questions always have a minimum fixed length of 2 octects for QTYPE and QCLASS.
+/// DNS questions always have a minimum fixed length of 2 octets for QTYPE and QCLASS.
 pub const QUESTION_FIXED_LENGTH: usize = 4;
 
 /// The maximum domain length is 255 octets.

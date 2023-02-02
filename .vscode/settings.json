@@ -1,0 +1,20 @@
+{
+  "cSpell.words": [
+    "additionals",
+    "addrs",
+    "ARPA",
+    "keepalive",
+    "nbytes",
+    "ptrs",
+    "Unpackable"
+  ],
+  "cSpell.dictionaryDefinitions": [
+    {
+      "name": "dns",
+      "path": "./.vscode/dns.txt"
+    }
+  ],
+  "cSpell.dictionaries": [
+    "dns"
+  ],
+}

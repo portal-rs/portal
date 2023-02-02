@@ -112,7 +112,7 @@ impl ToResolver for RecursiveResolver {
                 },
             };
 
-            // We got at least one answer. We can immediatly return these.
+            // We got at least one answer. We can immediately return these.
             if message.ancount() > 0 {
                 return Ok(message.into());
             }

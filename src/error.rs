@@ -16,7 +16,7 @@ pub enum ProtocolError {
     InvalidPointerLocation,
 
     #[error("Invalid byte in domain name label")]
-    InvalidOmainNameLabelByte,
+    InvalidDomainNameLabelByte,
 
     #[error("Domain name label too long (< {})", constants::dns::MAX_LABEL_LENGTH)]
     DomainNameLabelTooLong,

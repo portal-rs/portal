@@ -65,7 +65,7 @@ async fn handle_accept(
     };
 
     // NOTE (Techassi): Is this the best way to do this? We don't care about
-    // the original rdlens, but we should keep them initally if we actually
+    // the original rdlens, but we should keep them initially if we actually
     // need them. Normalizing them here seems the correct way until we
     // support writing back compressed names / messages.
     records.normalize_rdlens();

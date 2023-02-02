@@ -37,9 +37,9 @@ impl Unpackable for Name {
         let mut state = NameParseState::default();
         let mut name = Name::default();
 
-        // If we immediatly encounter a null byte, the name is root "."
+        // If we immediately encounter a null byte, the name is root "."
         // This can be simplified when if let chains are stabilized. The
-        // current solution is fugly ngl...
+        // current solution is ugly ngl...
         //
         // if let Some(b) = buf.peek() && b == 0 {
         //     buf.pop();
@@ -163,7 +163,7 @@ impl TryFrom<String> for Name {
         }
 
         if !value.is_ascii() {
-            return Err(ProtocolError::InvalidOmainNameLabelByte);
+            return Err(ProtocolError::InvalidDomainNameLabelByte);
         }
 
         let parts = value.split('.');
@@ -284,7 +284,7 @@ impl Name {
 
     /// Returns the domain name as fragments. For example `www.example.com`
     /// returns `vec![com, example.com, www.example.com]`. This function
-    /// is memory and CPU heavy as we need to copy and alloocate quite a lot.
+    /// is memory and CPU heavy as we need to copy and allocate quite a lot.
     /// Use with caution!
     pub fn fragments(&self) -> Vec<Name> {
         let mut fragments: Vec<Name> = Vec::new();
@@ -486,7 +486,7 @@ impl Label {
         Self::default()
     }
 
-    // TODO (Techassi): This idealy should not clone, but we need to introduce
+    // TODO (Techassi): This ideally should not clone, but we need to introduce
     // lifetimes across Label, Name and types using Name, e.g. Question
     pub fn bytes(&self) -> Vec<u8> {
         self.0.clone()

@@ -61,7 +61,7 @@ impl Packable for Message {
 }
 
 impl Message {
-    /// Return a new default [`Message`] with the provded [`Header`] already set.
+    /// Return a new default [`Message`] with the provided [`Header`] already set.
     pub fn new_with_header(header: Header) -> Self {
         Self {
             header,
@@ -71,8 +71,8 @@ impl Message {
 
     /// Set the vector of questions to the provided one. This does **NOT**
     /// update the QDCOUNT in the DNS header. This method is only usable
-    /// within the library it self, as this is potentialy dangerous and/or
-    /// can cause faulty behaviour.
+    /// within the library it self, as this is potentially dangerous and/or
+    /// can cause faulty behavior.
     ///
     /// To instead correctly update the QDCOUNT use the methods:
     ///
@@ -103,8 +103,8 @@ impl Message {
 
     /// Set the vector of answer records to the provided one. This does
     /// **NOT** update the ANCOUNT in the DNS header. This method is only
-    /// usable within the library it self, as this is potentialy dangerous
-    /// and/or can cause faulty behaviour.
+    /// usable within the library it self, as this is potentially dangerous
+    /// and/or can cause faulty behavior.
     ///
     /// To instead correctly update the ANCOUNT use the methods:
     ///
@@ -135,8 +135,8 @@ impl Message {
 
     /// Set the vector of authority records to the provided one. This does
     /// **NOT** update the NSCOUNT in the DNS header. This method is only
-    /// usable within the library it self, as this is potentialy dangerous
-    /// and/or can cause faulty behaviour.
+    /// usable within the library it self, as this is potentially dangerous
+    /// and/or can cause faulty behavior.
     ///
     /// To instead correctly update the NSCOUNT use the methods:
     ///
@@ -167,8 +167,8 @@ impl Message {
 
     /// Set the vector of additional records to the provided one. This does
     /// **NOT** update the ARCOUNT in the DNS header. This method is only
-    /// usable within the library it self, as this is potentialy dangerous
-    /// and/or can cause faulty behaviour.
+    /// usable within the library it self, as this is potentially dangerous
+    /// and/or can cause faulty behavior.
     ///
     /// To instead correctly update the ARCOUNT use the methods:
     ///
@@ -255,7 +255,7 @@ impl Message {
         len
     }
 
-    /// Returns if the message contains any SOA RRs in the authorative
+    /// Returns if the message contains any SOA RRs in the authoritative
     /// section.
     pub fn is_soa(&self) -> bool {
         for record in &self.authorities {
@@ -301,7 +301,7 @@ impl Message {
         let questions = unpack_questions(buf, message.qdcount())?;
         message.set_questions(questions);
 
-        // Unpack answer records. This will most likey be empty for requests
+        // Unpack answer records. This will most likely be empty for requests
         let answers = unpack_rrs(buf, message.ancount())?;
         message.set_answers(answers);
 
