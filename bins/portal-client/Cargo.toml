@@ -3,8 +3,12 @@ name = "portal-client"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "gun"
+path = "src/main.rs"
+
 [dependencies]
 tokio = { workspace = true }
+portal = { path = "../../" }
 clap = { workspace = true }
-portal = { path = "../" }
 anyhow = "1.0.68"

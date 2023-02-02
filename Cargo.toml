@@ -1,9 +1,7 @@
 [workspace]
 members = [
   ".",
-  "portal-ctl",
-  "portal-bin",
-  "portal-client"
+  "bins/*"
 ]
 
 [package]

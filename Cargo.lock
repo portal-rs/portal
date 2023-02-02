@@ -311,15 +311,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "portal-bin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 3.2.17",
- "portal",
-]
-
-[[package]]
 name = "portal-client"
 version = "0.1.0"
 dependencies = [
@@ -332,6 +323,15 @@ dependencies = [
 [[package]]
 name = "portal-ctl"
 version = "0.0.1"
+
+[[package]]
+name = "portal-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.2.17",
+ "portal",
+]
 
 [[package]]
 name = "ppv-lite86"

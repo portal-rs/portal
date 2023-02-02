@@ -1,0 +1,10 @@
+[package]
+name = "portal-ctl"
+version = "0.0.1"
+edition = "2021"
+
+[[bin]]
+name = "portalctl"
+path = "src/main.rs"
+
+[dependencies]
