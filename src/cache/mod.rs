@@ -10,7 +10,7 @@ mod status;
 pub use status::*;
 
 pub struct Cache {
-    inner: Tree<CachedRecord>,
+    inner: Tree,
 }
 
 impl Cache {
@@ -30,7 +30,7 @@ impl Cache {
             cached_records.push(CachedRecord { expires_at, record })
         }
 
-        self.inner.insert_multi(name, &mut cached_records);
+        // self.inner.insert_multi(name, &mut cached_records);
     }
 }
 
