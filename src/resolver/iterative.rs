@@ -1,21 +1,27 @@
-use super::ToResolver;
+use async_trait::async_trait;
+
+use crate::{
+    resolver::{ResolveResult, ToResolver},
+    types::dns::ToQuery,
+};
 
 pub struct IterativeResolver {}
 
+#[async_trait]
 impl ToResolver for IterativeResolver {
-    fn resolve(&self, message: &crate::types::dns::Message) -> super::ResolveResult {
+    async fn resolve(&self, message: &crate::types::dns::Message) -> ResolveResult {
         todo!()
     }
 
-    fn resolve_raw(&self, name: String, class: u16, typ: u16) -> super::ResolveResult {
+    async fn resolve_raw<Q: ToQuery>(&self, query: Q) -> ResolveResult {
         todo!()
     }
 
-    fn lookup(&self, name: String, class: u16, typ: u16) -> super::ResolveResult {
-        todo!()
-    }
+    // async fn lookup<Q: ToQuery>(&self, query: Q) -> ResolveResult {
+    //     todo!()
+    // }
 
-    fn refresh(&self, name: String, class: u16, typ: u16) {
-        todo!()
-    }
+    // async fn refresh<Q: ToQuery>(&self, query: Q) {
+    //     todo!()
+    // }
 }
