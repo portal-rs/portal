@@ -38,11 +38,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let socket_addr = SocketAddr::new(cli.target, cli.port);
-
-    let client = match client::Client::new().await {
-        Ok(c) => c,
-        Err(err) => panic!("{}", err),
-    };
+    let client = client::Client::new().await?;
 
     let (msg, dur) = client
         .query_duration((cli.name, cli.ty, Class::IN), socket_addr)

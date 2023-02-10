@@ -1,16 +1,20 @@
 use std::time;
 
-use binbuf::error::BufferError;
 use thiserror::Error;
 use tokio::task::JoinError;
+
+use crate::types::dns::{HeaderError, MessageError};
 
 #[derive(Debug, Error)]
 pub enum ClientError {
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
 
-    #[error("Failed to write to buf: {0}")]
-    BufferError(#[from] BufferError),
+    #[error("Message error: {0}")]
+    MessageError(#[from] MessageError),
+
+    #[error("Header error: {0}")]
+    HeaderError(#[from] HeaderError),
 
     #[error("Failed to send query message: Only send partial data")]
     SendPartial,
