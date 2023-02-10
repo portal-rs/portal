@@ -1,6 +1,4 @@
-use crate::packing::{
-    PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-};
+use binbuf::prelude::*;
 
 /// DNS EDNS0 Option Codes (OPT)
 ///
@@ -71,17 +69,21 @@ pub enum OptionCode {
     DEVICEID,
 }
 
-impl Unpackable for OptionCode {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let code = u16::unpack(buf)?;
+impl Readable for OptionCode {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let code = u16::read::<E>(buf)?;
         Ok(OptionCode::from(code))
     }
 }
 
-impl Packable for OptionCode {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+impl Writeable for OptionCode {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let code: u16 = self.into();
-        code.pack(buf)
+        code.write::<E>(buf)
     }
 }
 

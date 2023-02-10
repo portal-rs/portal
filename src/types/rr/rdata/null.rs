@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult};
+use binbuf::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct NULL {
@@ -13,9 +13,11 @@ impl Display for NULL {
     }
 }
 
-impl Packable for NULL {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        buf.pack_vec(&mut self.data.clone())
+impl Writeable for NULL {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        Ok(buf.write(&mut self.data.clone()))
     }
 }
 
@@ -24,9 +26,9 @@ impl NULL {
         Self { data: Vec::new() }
     }
 
-    pub fn unpack(buf: &mut UnpackBuffer, rdlen: u16) -> UnpackBufferResult<Self> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, rdlen: u16) -> Result<Self, BufferError> {
         if rdlen > 0 {
-            let data = buf.unpack_vec(rdlen as usize)?;
+            let data = buf.read_vec(rdlen as usize)?;
             return Ok(Self { data });
         }
 

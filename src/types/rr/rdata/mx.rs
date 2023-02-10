@@ -1,11 +1,8 @@
 use std::fmt::Display;
 
-use crate::{
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::dns::Name,
-};
+use binbuf::prelude::*;
+
+use crate::types::dns::Name;
 
 #[derive(Debug, Clone)]
 pub struct MX {
@@ -19,10 +16,12 @@ impl Display for MX {
     }
 }
 
-impl Unpackable for MX {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let preference = u16::unpack(buf)?;
-        let exchange = Name::unpack(buf)?;
+impl Readable for MX {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let preference = u16::read::<E>(buf)?;
+        let exchange = Name::read::<E>(buf)?;
 
         Ok(Self {
             preference,
@@ -31,10 +30,16 @@ impl Unpackable for MX {
     }
 }
 
-impl Packable for MX {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.preference.pack(buf)?;
-        self.exchange.pack(buf)
+impl Writeable for MX {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = bytes_written! {
+            self.preference.write::<E>(buf)?;
+            self.exchange.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 

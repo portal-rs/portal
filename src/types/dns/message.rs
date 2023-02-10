@@ -1,15 +1,15 @@
 use std::fmt::Display;
 
+use binbuf::prelude::*;
+
 use crate::{
     constants,
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
     resolver::ResultRecords,
-    types::rr::{RData, Record, SOA},
+    types::{
+        dns::{Header, Question},
+        rr::{RData, Record, SOA},
+    },
 };
-
-use super::{Header, Question};
 
 /// [`Message`] describes a complete DNS message describes in RFC 1035
 /// Section 4. See https://datatracker.ietf.org/doc/html/rfc1035#section-4
@@ -47,16 +47,20 @@ impl Display for Message {
     }
 }
 
-impl Packable for Message {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.header.pack(buf)?;
+impl Writeable for Message {
+    type Error = BufferError;
 
-        pack_questions(buf, &self.question)?;
-        pack_rrs(buf, &self.answers)?;
-        pack_rrs(buf, &self.authorities)?;
-        pack_rrs(buf, &self.additionals)?;
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = bytes_written! {
+            self.header.write::<E>(buf)?;
 
-        Ok(())
+            self.question.write::<E>(buf)?;
+            self.answers.write::<E>(buf)?;
+            self.authorities.write::<E>(buf)?;
+            self.additionals.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 
@@ -294,36 +298,39 @@ impl Message {
     }
 
     /// Unpack the complete DNS [`Message`] based on the already unpacked [`Header`].
-    pub fn unpack(buf: &mut UnpackBuffer, header: Header) -> UnpackBufferResult<Self> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, header: Header) -> Result<Self, BufferError> {
         let mut message = Self::new_with_header(header);
 
         // Unpack questions
-        let questions = unpack_questions(buf, message.qdcount())?;
+        let questions = read_questions::<E>(buf, message.qdcount())?;
         message.set_questions(questions);
 
         // Unpack answer records. This will most likely be empty for requests
-        let answers = unpack_rrs(buf, message.ancount())?;
+        let answers = read_rrs::<E>(buf, message.ancount())?;
         message.set_answers(answers);
 
         // Unpack authority records
-        let authorities = unpack_rrs(buf, message.nscount())?;
+        let authorities = read_rrs::<E>(buf, message.nscount())?;
         message.set_authorities(authorities);
 
         // Unpack additional records
-        let additionals = unpack_rrs(buf, message.arcount())?;
+        let additionals = read_rrs::<E>(buf, message.arcount())?;
         message.set_additionals(additionals);
 
         Ok(message)
     }
 }
 
-fn unpack_questions(buf: &mut UnpackBuffer, count: u16) -> UnpackBufferResult<Vec<Question>> {
+fn read_questions<E: Endianness>(
+    buf: &mut ReadBuffer,
+    count: u16,
+) -> Result<Vec<Question>, BufferError> {
     let mut questions: Vec<Question> = Vec::new();
 
     // Let's do a naive approach and assume the QDCOUNT is correct
     // TODO (Techassi): Don't be naive
     for _ in 0..count {
-        match Question::unpack(buf) {
+        match Question::read::<E>(buf) {
             Ok(question) => questions.push(question),
             Err(err) => return Err(err),
         };
@@ -332,31 +339,15 @@ fn unpack_questions(buf: &mut UnpackBuffer, count: u16) -> UnpackBufferResult<Ve
     Ok(questions)
 }
 
-fn unpack_rrs(buf: &mut UnpackBuffer, count: u16) -> UnpackBufferResult<Vec<Record>> {
+fn read_rrs<E: Endianness>(buf: &mut ReadBuffer, count: u16) -> Result<Vec<Record>, BufferError> {
     let mut rrs: Vec<Record> = Vec::new();
 
     for _ in 0..count {
-        match Record::unpack(buf) {
+        match Record::read::<E>(buf) {
             Ok(rr) => rrs.push(rr),
             Err(err) => return Err(err),
         }
     }
 
     Ok(rrs)
-}
-
-fn pack_questions(buf: &mut PackBuffer, questions: &Vec<Question>) -> PackBufferResult {
-    for question in questions {
-        question.pack(buf)?;
-    }
-
-    Ok(())
-}
-
-fn pack_rrs(buf: &mut PackBuffer, records: &Vec<Record>) -> PackBufferResult {
-    for record in records {
-        record.pack(buf)?;
-    }
-
-    Ok(())
 }

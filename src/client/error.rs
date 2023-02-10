@@ -1,5 +1,6 @@
 use std::time;
 
+use binbuf::error::BufferError;
 use thiserror::Error;
 use tokio::task::JoinError;
 
@@ -9,7 +10,7 @@ pub enum ClientError {
     IO(#[from] std::io::Error),
 
     #[error("Failed to write to buf: {0}")]
-    WriteToBuf(#[from] crate::error::ProtocolError),
+    BufferError(#[from] BufferError),
 
     #[error("Failed to send query message: Only send partial data")]
     SendPartial,

@@ -1,5 +1,6 @@
 use std::net::AddrParseError;
 
+use binbuf::prelude::BufferError;
 use thiserror::Error;
 
 use crate::constants;
@@ -44,4 +45,7 @@ pub enum ProtocolError {
 
     #[error("IP address parse error: {0}")]
     AddrParseError(#[from] AddrParseError),
+
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
 }

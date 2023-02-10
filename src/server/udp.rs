@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
+use binbuf::prelude::*;
+
 use crate::{
-    packing::{PackBuffer, Packable, UnpackBuffer, Unpackable},
     resolver,
     server::accept,
     types::{
@@ -12,10 +13,10 @@ use crate::{
 
 pub async fn handle(buf: &[u8], session: Session, res: Arc<impl resolver::ToResolver>) {
     // Create an unpack buffer which keeps track of the offset automatically
-    let mut buf = UnpackBuffer::new(buf);
+    let mut buf = ReadBuffer::new(buf);
 
     // Unpack DNS header data
-    let header = match Header::unpack(&mut buf) {
+    let header = match Header::read_be(&mut buf) {
         Ok(result) => result,
         Err(err) => {
             println!("{}", err);
@@ -27,7 +28,7 @@ pub async fn handle(buf: &[u8], session: Session, res: Arc<impl resolver::ToReso
     // at some basic DNS header checks.
     match accept::should_accept(&header).await {
         accept::Action::Accept => {
-            let mut message = match Message::unpack(&mut buf, header) {
+            let mut message = match Message::read::<BigEndian>(&mut buf, header) {
                 Ok(msg) => msg,
                 Err(err) => {
                     println!("{}", err);
@@ -74,7 +75,7 @@ async fn handle_accept(
 }
 
 async fn handle_response(message: &mut Message, session: Session) {
-    let mut buf = PackBuffer::new();
+    let mut buf = WriteBuffer::new();
 
     // Set some response specific values in the message
     message.set_is_response(true);
@@ -82,7 +83,7 @@ async fn handle_response(message: &mut Message, session: Session) {
 
     println!("{:?}", message);
 
-    if let Err(err) = message.pack(&mut buf) {
+    if let Err(err) = message.write::<BigEndian>(&mut buf) {
         // TODO (Techassi): Return message with RCODE 2
         println!("{}", err);
         return;

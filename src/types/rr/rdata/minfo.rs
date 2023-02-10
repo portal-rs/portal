@@ -1,11 +1,8 @@
 use std::fmt::Display;
 
-use crate::{
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::dns::Name,
-};
+use binbuf::prelude::*;
+
+use crate::types::dns::Name;
 
 #[derive(Debug, Clone)]
 pub struct MINFO {
@@ -19,19 +16,27 @@ impl Display for MINFO {
     }
 }
 
-impl Unpackable for MINFO {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let rmailbx = Name::unpack(buf)?;
-        let emailbx = Name::unpack(buf)?;
+impl Readable for MINFO {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let rmailbx = Name::read::<E>(buf)?;
+        let emailbx = Name::read::<E>(buf)?;
 
         Ok(Self { rmailbx, emailbx })
     }
 }
 
-impl Packable for MINFO {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.rmailbx.pack(buf)?;
-        self.emailbx.pack(buf)
+impl Writeable for MINFO {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = bytes_written! {
+            self.rmailbx.write::<E>(buf)?;
+            self.emailbx.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 

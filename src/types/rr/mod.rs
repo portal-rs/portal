@@ -1,11 +1,8 @@
 use std::fmt::Display;
 
-use crate::{
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::dns::Name,
-};
+use binbuf::prelude::*;
+
+use crate::types::dns::Name;
 
 mod classes;
 mod rdata;
@@ -37,26 +34,27 @@ impl Display for Record {
     }
 }
 
-impl Unpackable for Record {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let header = match RHeader::unpack(buf) {
-            Ok(header) => header,
-            Err(err) => return Err(err),
-        };
+impl Readable for Record {
+    type Error = BufferError;
 
-        let data = match RData::unpack(buf, &header) {
-            Ok(data) => data,
-            Err(err) => return Err(err),
-        };
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let header = RHeader::read::<E>(buf)?;
+        let data = RData::read::<E>(buf, &header)?;
 
         Ok(Self { header, data })
     }
 }
 
-impl Packable for Record {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.header.pack(buf)?;
-        self.data.pack(buf)
+impl Writeable for Record {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = bytes_written! {
+            self.header.write::<E>(buf)?;
+            self.data.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 

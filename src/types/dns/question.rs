@@ -1,10 +1,9 @@
 use std::fmt::Display;
 
+use binbuf::prelude::*;
+
 use crate::{
     constants,
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
     types::{
         dns::{Name, Query},
         rr::{Class, Type},
@@ -41,23 +40,29 @@ impl From<Query> for Question {
     }
 }
 
-impl Unpackable for Question {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let name = Name::unpack(buf)?;
-        let ty = Type::unpack(buf)?;
-        let class = Class::unpack(buf)?;
+impl Readable for Question {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let name = Name::read::<E>(buf)?;
+        let ty = Type::read::<E>(buf)?;
+        let class = Class::read::<E>(buf)?;
 
         Ok(Question { name, ty, class })
     }
 }
 
-impl Packable for Question {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.name.pack(buf)?;
-        self.ty.pack(buf)?;
-        self.class.pack(buf)?;
+impl Writeable for Question {
+    type Error = BufferError;
 
-        Ok(())
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = bytes_written! {
+            self.name.write::<E>(buf)?;
+            self.ty.write::<E>(buf)?;
+            self.class.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 

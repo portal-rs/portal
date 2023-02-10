@@ -1,13 +1,10 @@
 use std::{collections::HashMap, fmt::Display};
 
-use crate::{
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::{
-        edns::{EdnsHeader, Option, OptionCode},
-        rr::RHeader,
-    },
+use binbuf::prelude::*;
+
+use crate::types::{
+    edns::{EdnsHeader, Option, OptionCode},
+    rr::RHeader,
 };
 
 #[derive(Debug, Clone)]
@@ -23,7 +20,10 @@ impl Display for OPT {
 }
 
 impl OPT {
-    pub fn unpack(buf: &mut UnpackBuffer, rheader: &RHeader) -> UnpackBufferResult<Self> {
+    pub fn read<E: Endianness>(
+        buf: &mut ReadBuffer,
+        rheader: &RHeader,
+    ) -> Result<Self, BufferError> {
         // First we create the EDNS header
         let header = EdnsHeader::from(rheader);
 
@@ -34,7 +34,7 @@ impl OPT {
 
         // Unpack options until rdlen is exhausted
         while start_len - buf.len() < rdlen {
-            let option = Option::unpack(buf)?;
+            let option = Option::read::<E>(buf)?;
             options.insert(option.code(), option);
         }
 
@@ -42,12 +42,16 @@ impl OPT {
     }
 }
 
-impl Packable for OPT {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+impl Writeable for OPT {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let mut n = 0;
+
         for option in self.options.values() {
-            option.pack(buf)?;
+            n += option.write::<E>(buf)?;
         }
 
-        Ok(())
+        Ok(n)
     }
 }

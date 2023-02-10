@@ -1,11 +1,8 @@
 use std::fmt::Display;
 
-use crate::{
-    errors::ProtocolError,
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-};
+use binbuf::prelude::*;
+
+use crate::errors::ProtocolError;
 
 /// [`Class`] describes resource record class codes.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
@@ -40,17 +37,21 @@ impl Default for Class {
     }
 }
 
-impl Unpackable for Class {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let class = u16::unpack(buf)?;
+impl Readable for Class {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let class = u16::read::<E>(buf)?;
         Ok(Class::from(class))
     }
 }
 
-impl Packable for Class {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+impl Writeable for Class {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let class: u16 = self.into();
-        class.pack(buf)
+        class.write::<E>(buf)
     }
 }
 

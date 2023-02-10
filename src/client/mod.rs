@@ -5,12 +5,12 @@ use std::{
     time::{self, Duration},
 };
 
+use binbuf::prelude::*;
 use rand;
 use tokio::{net::UdpSocket, time::Instant};
 
 use crate::{
     constants,
-    packing::{PackBuffer, Packable, UnpackBuffer, Unpackable},
     types::{
         dns::{Header, Message, Query, Question, ToQuery},
         udp::Session,
@@ -141,10 +141,8 @@ async fn do_query(
     let mut message = Message::new_with_header(Header::new(id));
     message.add_question(Question::from(query));
 
-    let mut buf = PackBuffer::new();
-    if let Err(err) = message.pack(&mut buf) {
-        return Err(ClientError::WriteToBuf(err));
-    }
+    let mut buf = WriteBuffer::new();
+    message.write::<BigEndian>(&mut buf)?;
 
     // Send DNS query to the remote DNS server
     match timeout(
@@ -198,11 +196,11 @@ async fn wait_for_query_response(session: Session) -> ClientResult<Message> {
 }
 
 async fn handle_query_response(buf: &[u8]) -> ClientResult<Message> {
-    let mut buf = UnpackBuffer::new(buf);
+    let mut buf = ReadBuffer::new(buf);
 
-    let header = Header::unpack(&mut buf)?;
+    let header = Header::read::<BigEndian>(&mut buf)?;
     // Check transaction ID to match. Implement fn accept::accept_as_client
-    let message = Message::unpack(&mut buf, header)?;
+    let message = Message::read::<BigEndian>(&mut buf, header)?;
 
     Ok(message)
 }

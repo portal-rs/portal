@@ -1,12 +1,9 @@
 use std::{fmt::Display, str::FromStr};
 
-use crate::{
-    constants,
-    error::ProtocolError,
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-};
+use binbuf::prelude::*;
+use thiserror::Error;
+
+use crate::constants;
 
 enum NameParseState {
     LabelLenOrPointer,
@@ -21,19 +18,42 @@ impl Default for NameParseState {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum NameError {
+    #[error("Invalid domain name label length or compression pointer ({0})")]
+    InvalidLabelLenOrPointer(u8),
+
+    #[error("Invalid compression pointer location")]
+    InvalidPointerLocation,
+
+    #[error("Invalid byte in domain name label")]
+    InvalidDomainNameLabelByte,
+
+    #[error("Domain name label too long (< {})", constants::dns::MAX_LABEL_LENGTH)]
+    DomainNameLabelTooLong,
+
+    #[error("Domain name to long (< {})", constants::dns::MAX_DOMAIN_LENGTH)]
+    DomainNameTooLong,
+
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
+}
+
+impl From<NameError> for BufferError {
+    fn from(error: NameError) -> Self {
+        Self::Other(error.to_string())
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Name {
     labels: Vec<Label>,
 }
 
-impl Display for Name {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_dotted_string())
-    }
-}
+impl Readable for Name {
+    type Error = NameError;
 
-impl Unpackable for Name {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let mut state = NameParseState::default();
         let mut name = Name::default();
 
@@ -68,20 +88,20 @@ impl Unpackable for Name {
                     Some(b) if b & 0xC0 == 0x0 => NameParseState::Label,
 
                     // A byte which shouldn't be here
-                    Some(b) => return Err(ProtocolError::InvalidLabelLenOrPointer(b)),
+                    Some(b) => return Err(NameError::InvalidLabelLenOrPointer(b)),
                 },
                 NameParseState::Pointer => {
                     // Read a u16 which starts with 11 (0xC0) and apply the bit
                     // mask to extract the actual compression pointer location
-                    let pointer_location = match u16::unpack(buf) {
+                    let pointer_location = match u16::read::<E>(buf) {
                         Ok(b) => (b & constants::dns::COMPRESSION_POINTER_MASK) as usize,
-                        Err(err) => return Err(err),
+                        Err(err) => return Err(err.into()),
                     };
 
                     // Ensure we jump to a location which comes before the
                     // current offset
                     if pointer_location > buf.offset() {
-                        return Err(ProtocolError::InvalidPointerLocation);
+                        return Err(NameError::InvalidPointerLocation);
                     }
 
                     // Jump to the pointer location by updating the underlying
@@ -93,11 +113,11 @@ impl Unpackable for Name {
                     // Read the label based on the label length byte. This
                     // returns an error if the label length exceeds the maximum
                     // domain name label length of 63
-                    let bytes = match buf.unpack_character_string(constants::dns::MAX_LABEL_LENGTH)
-                    {
-                        Ok(bytes) => bytes,
-                        Err(_) => return Err(ProtocolError::DomainNameLabelTooLong),
-                    };
+                    let bytes =
+                        match buf.read_char_string(Some(constants::dns::MAX_LABEL_LENGTH.into())) {
+                            Ok(bytes) => bytes,
+                            Err(_) => return Err(NameError::DomainNameLabelTooLong),
+                        };
 
                     // Add the label to the domain name. This returns an error
                     // if the domain name length exceeds the maximum domain
@@ -110,7 +130,7 @@ impl Unpackable for Name {
                     // We followed one ore more compression pointers and now
                     // need to jump back to continue resolving the pointer
                     // chain
-                    if buf.iter_back() {
+                    if buf.jump_reset() {
                         break;
                     }
 
@@ -126,33 +146,43 @@ impl Unpackable for Name {
     }
 }
 
-impl Packable for Name {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+impl Writeable for Name {
+    type Error = NameError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let buffer_len_start = buf.len();
+        let mut n = 0;
 
         // TODO (Techassi): This does NOT handle compression. Add it
         for label in self.iter() {
             if label.len() > constants::dns::MAX_LABEL_LENGTH.into() {
-                return Err(ProtocolError::DomainNameLabelTooLong);
+                return Err(NameError::DomainNameLabelTooLong);
             }
 
             buf.push(label.len() as u8);
-            buf.pack_vec(&mut label.bytes())?;
+            n += buf.write(&mut label.bytes());
         }
 
         // Terminating null byte
         buf.push(0);
+        n += 1;
 
         if buf.len() - buffer_len_start > constants::dns::MAX_DOMAIN_LENGTH.into() {
-            return Err(ProtocolError::DomainNameTooLong);
+            return Err(NameError::DomainNameTooLong);
         }
 
-        Ok(())
+        Ok(n)
+    }
+}
+
+impl Display for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_dotted_string())
     }
 }
 
 impl TryFrom<String> for Name {
-    type Error = ProtocolError;
+    type Error = NameError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let mut name = Self::default();
@@ -163,7 +193,7 @@ impl TryFrom<String> for Name {
         }
 
         if !value.is_ascii() {
-            return Err(ProtocolError::InvalidDomainNameLabelByte);
+            return Err(NameError::InvalidDomainNameLabelByte);
         }
 
         let parts = value.split('.');
@@ -178,7 +208,7 @@ impl TryFrom<String> for Name {
 }
 
 impl FromStr for Name {
-    type Err = ProtocolError;
+    type Err = NameError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::try_from(s.to_string())
@@ -186,7 +216,7 @@ impl FromStr for Name {
 }
 
 impl TryFrom<&str> for Name {
-    type Error = ProtocolError;
+    type Error = NameError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Self::try_from(value.to_string().to_lowercase())
@@ -194,7 +224,7 @@ impl TryFrom<&str> for Name {
 }
 
 impl TryFrom<&[Label]> for Name {
-    type Error = ProtocolError;
+    type Error = NameError;
 
     fn try_from(value: &[Label]) -> Result<Self, Self::Error> {
         let mut name = Name::default();
@@ -261,15 +291,15 @@ impl Name {
     /// n.add_label("com".try_into()?)?;
     ///
     /// assert_eq!(n.as_dotted_string(), String::from("www.example.com."));
-    /// # Ok::<(), portal::errors::ProtocolError>(())
+    /// # Ok::<(), portal::types::dns::NameError>(())
     /// ```
-    pub fn add_label(&mut self, label: Label) -> Result<(), ProtocolError> {
+    pub fn add_label(&mut self, label: Label) -> Result<(), NameError> {
         if self.len() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
-            return Err(ProtocolError::DomainNameTooLong);
+            return Err(NameError::DomainNameTooLong);
         }
 
         if label.0.len() > constants::dns::MAX_LABEL_LENGTH.into() {
-            return Err(ProtocolError::DomainNameLabelTooLong);
+            return Err(NameError::DomainNameLabelTooLong);
         }
 
         self.labels.push(label);
@@ -446,11 +476,11 @@ impl<'a> ExactSizeIterator for NameIterator<'a> {}
 pub struct Label(Vec<u8>);
 
 impl TryFrom<&[u8]> for Label {
-    type Error = ProtocolError;
+    type Error = NameError;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         if bytes.len() > constants::dns::MAX_LABEL_LENGTH.into() {
-            return Err(ProtocolError::DomainNameLabelTooLong);
+            return Err(NameError::DomainNameLabelTooLong);
         }
 
         let bytes = bytes
@@ -465,7 +495,7 @@ impl TryFrom<&[u8]> for Label {
 
 // TODO (Techassi): Check if the str contains any non allowed chars
 impl TryFrom<&str> for Label {
-    type Error = ProtocolError;
+    type Error = NameError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Self::try_from(value.to_lowercase().as_bytes())

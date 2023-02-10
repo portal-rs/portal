@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
-use crate::{
-    constants,
-    packing::{PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult},
-};
+use binbuf::prelude::*;
+
+use crate::constants;
 
 #[derive(Debug, Clone)]
 pub struct TXT {
@@ -23,25 +22,29 @@ impl Display for TXT {
     }
 }
 
-impl Packable for TXT {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+impl Writeable for TXT {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let mut n = 0;
+
         for s in &self.data {
-            buf.pack_character_string(s.as_slice(), constants::dns::MAX_CHAR_STRING_LENGTH)?;
+            n +=
+                buf.write_char_string(s.as_slice(), Some(constants::dns::MAX_CHAR_STRING_LENGTH))?;
         }
 
-        Ok(())
+        Ok(n)
     }
 }
 
 impl TXT {
-    pub fn unpack(buf: &mut UnpackBuffer, rdlen: u16) -> UnpackBufferResult<Self> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, rdlen: u16) -> Result<Self, BufferError> {
         let start_len = buf.len();
         let rdlen = rdlen as usize;
         let mut data = Vec::new();
 
         while start_len - buf.len() < rdlen {
-            let char_string =
-                buf.unpack_character_string(constants::dns::MAX_CHAR_STRING_LENGTH)?;
+            let char_string = buf.read_char_string(Some(constants::dns::MAX_CHAR_STRING_LENGTH))?;
             data.push(char_string.to_vec());
         }
 

@@ -1,11 +1,8 @@
 use std::{fmt::Display, str::FromStr};
 
-use crate::{
-    errors::ProtocolError,
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-};
+use binbuf::prelude::*;
+
+use crate::errors::ProtocolError;
 
 /// [`Type`] describes resource record types.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
@@ -70,17 +67,21 @@ impl Default for Type {
     }
 }
 
-impl Unpackable for Type {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let ty = u16::unpack(buf)?;
+impl Readable for Type {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let ty = u16::read::<E>(buf)?;
         Ok(Self::from(ty))
     }
 }
 
-impl Packable for Type {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
+impl Writeable for Type {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let ty: u16 = self.into();
-        ty.pack(buf)
+        ty.write::<E>(buf)
     }
 }
 

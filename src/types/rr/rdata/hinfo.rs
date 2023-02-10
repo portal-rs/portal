@@ -1,11 +1,8 @@
 use std::fmt::Display;
 
-use crate::{
-    constants,
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-};
+use binbuf::prelude::*;
+
+use crate::constants;
 
 #[derive(Debug, Clone)]
 pub struct HINFO {
@@ -19,23 +16,33 @@ impl Display for HINFO {
     }
 }
 
-impl Unpackable for HINFO {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
+impl Readable for HINFO {
+    type Error = BufferError;
+
+    fn read<E: binbuf::Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let cpu = buf
-            .unpack_character_string(constants::dns::MAX_CHAR_STRING_LENGTH)?
+            .read_char_string(Some(constants::dns::MAX_CHAR_STRING_LENGTH.into()))?
             .to_vec();
         let os = buf
-            .unpack_character_string(constants::dns::MAX_CHAR_STRING_LENGTH)?
+            .read_char_string(Some(constants::dns::MAX_CHAR_STRING_LENGTH.into()))?
             .to_vec();
 
         Ok(Self { cpu, os })
     }
 }
 
-impl Packable for HINFO {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        buf.pack_character_string(self.cpu.as_slice(), constants::dns::MAX_CHAR_STRING_LENGTH)?;
-        buf.pack_character_string(self.os.as_slice(), constants::dns::MAX_CHAR_STRING_LENGTH)
+impl Writeable for HINFO {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        buf.write_char_string(
+            self.cpu.as_slice(),
+            Some(constants::dns::MAX_CHAR_STRING_LENGTH),
+        )?;
+        buf.write_char_string(
+            self.os.as_slice(),
+            Some(constants::dns::MAX_CHAR_STRING_LENGTH),
+        )
     }
 }
 

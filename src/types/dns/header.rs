@@ -1,9 +1,6 @@
-use crate::{
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::{opcode::Opcode, rcode::Rcode},
-};
+use binbuf::prelude::*;
+
+use crate::types::{opcode::Opcode, rcode::Rcode};
 
 /// [`Header`] describes the header data of a message. This header format enables easy access to all header fields. The
 /// [`RawHeader`] in comparison stores raw data directly from the wire.
@@ -25,16 +22,6 @@ pub struct Header {
     pub arcount: u16,
 }
 
-impl Header {
-    /// Construct a new (default) DNS [`Header`] with the provided ID.
-    pub fn new(id: u16) -> Self {
-        Self {
-            id,
-            ..Default::default()
-        }
-    }
-}
-
 impl Default for Header {
     fn default() -> Self {
         Self {
@@ -52,41 +39,6 @@ impl Default for Header {
             nscount: 0,
             arcount: 0,
         }
-    }
-}
-
-impl Unpackable for Header {
-    /// Unpacks the first 12 octets from the DNS message. The DNS header is
-    /// fixed in size. The function returns the [`Header`] it self and the
-    /// offset (which will always be 12). This function is usually the first
-    /// step in unpacking the whole message.
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let id = u16::unpack(buf)?;
-        let flags = u16::unpack(buf)?;
-        let qdcount = u16::unpack(buf)?;
-        let ancount = u16::unpack(buf)?;
-        let nscount = u16::unpack(buf)?;
-        let arcount = u16::unpack(buf)?;
-
-        let header = Header::from(RawHeader {
-            id,
-            flags,
-            qdcount,
-            ancount,
-            nscount,
-            arcount,
-        });
-
-        Ok(header)
-    }
-}
-
-impl Packable for Header {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        let raw_header = RawHeader::from(self);
-        raw_header.pack(buf)?;
-
-        Ok(())
     }
 }
 
@@ -110,6 +62,53 @@ impl From<RawHeader> for Header {
     }
 }
 
+impl Readable for Header {
+    type Error = BufferError;
+
+    /// Unpacks the first 12 octets from the DNS message. The DNS header is
+    /// fixed in size. The function returns the [`Header`] it self and the
+    /// offset (which will always be 12). This function is usually the first
+    /// step in unpacking the whole message.
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let id = u16::read::<E>(buf)?;
+        let flags = u16::read::<E>(buf)?;
+        let qdcount = u16::read::<E>(buf)?;
+        let ancount = u16::read::<E>(buf)?;
+        let nscount = u16::read::<E>(buf)?;
+        let arcount = u16::read::<E>(buf)?;
+
+        let header = Header::from(RawHeader {
+            id,
+            flags,
+            qdcount,
+            ancount,
+            nscount,
+            arcount,
+        });
+
+        Ok(header)
+    }
+}
+
+impl Writeable for Header {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let raw_header = RawHeader::from(self);
+        raw_header.write::<E>(buf)
+    }
+}
+
+impl Header {
+    /// Construct a new (default) DNS [`Header`] with the provided ID.
+    pub fn new(id: u16) -> Self {
+        Self {
+            id,
+            ..Default::default()
+        }
+    }
+}
+
 /// [`RawHeader`] describes the raw header data of a message directly from the wire. The data gets unpacked by splitting
 /// the message into six 16 bit (2 octet) chunks. The first chunk is just the **ID**. The second chunk **flags** carries
 /// data like QR, OPCODE, etc. which gets split up further by bit masks. The remaining four chunks contain counts for
@@ -123,16 +122,16 @@ pub struct RawHeader {
     pub arcount: u16,
 }
 
-impl Packable for RawHeader {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.id.pack(buf)?;
-        self.flags.pack(buf)?;
-        self.qdcount.pack(buf)?;
-        self.ancount.pack(buf)?;
-        self.nscount.pack(buf)?;
-        self.arcount.pack(buf)?;
+impl Writeable for RawHeader {
+    type Error = BufferError;
 
-        Ok(())
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        self.id.write::<E>(buf)?;
+        self.flags.write::<E>(buf)?;
+        self.qdcount.write::<E>(buf)?;
+        self.ancount.write::<E>(buf)?;
+        self.nscount.write::<E>(buf)?;
+        self.arcount.write::<E>(buf)
     }
 }
 

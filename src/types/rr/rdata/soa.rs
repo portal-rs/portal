@@ -1,11 +1,8 @@
 use std::fmt::Display;
 
-use crate::{
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::dns::Name,
-};
+use binbuf::prelude::*;
+
+use crate::types::dns::Name;
 
 #[derive(Debug, Clone)]
 pub struct SOA {
@@ -18,15 +15,17 @@ pub struct SOA {
     minimum: u32,
 }
 
-impl Unpackable for SOA {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let mname = Name::unpack(buf)?;
-        let rname = Name::unpack(buf)?;
-        let serial = u32::unpack(buf)?;
-        let refresh = u32::unpack(buf)?;
-        let retry = u32::unpack(buf)?;
-        let expire = u32::unpack(buf)?;
-        let minimum = u32::unpack(buf)?;
+impl Readable for SOA {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let mname = Name::read::<E>(buf)?;
+        let rname = Name::read::<E>(buf)?;
+        let serial = u32::read::<E>(buf)?;
+        let refresh = u32::read::<E>(buf)?;
+        let retry = u32::read::<E>(buf)?;
+        let expire = u32::read::<E>(buf)?;
+        let minimum = u32::read::<E>(buf)?;
 
         Ok(Self {
             mname,
@@ -40,15 +39,21 @@ impl Unpackable for SOA {
     }
 }
 
-impl Packable for SOA {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.mname.pack(buf)?;
-        self.rname.pack(buf)?;
-        self.serial.pack(buf)?;
-        self.refresh.pack(buf)?;
-        self.retry.pack(buf)?;
-        self.expire.pack(buf)?;
-        self.minimum.pack(buf)
+impl Writeable for SOA {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = bytes_written! {
+            self.mname.write::<E>(buf)?;
+            self.rname.write::<E>(buf)?;
+            self.serial.write::<E>(buf)?;
+            self.refresh.write::<E>(buf)?;
+            self.retry.write::<E>(buf)?;
+            self.expire.write::<E>(buf)?;
+            self.minimum.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 

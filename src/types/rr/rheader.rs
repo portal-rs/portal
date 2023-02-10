@@ -1,11 +1,8 @@
-use crate::{
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::{
-        dns::Name,
-        rr::{Class, Type},
-    },
+use binbuf::prelude::*;
+
+use crate::types::{
+    dns::Name,
+    rr::{Class, Type},
 };
 
 #[derive(Debug, Clone, Default)]
@@ -26,13 +23,15 @@ impl ToString for RHeader {
     }
 }
 
-impl Unpackable for RHeader {
-    fn unpack(buf: &mut UnpackBuffer) -> UnpackBufferResult<Self> {
-        let name = Name::unpack(buf)?;
-        let ty = Type::unpack(buf)?;
-        let class = Class::unpack(buf)?;
-        let ttl = u32::unpack(buf)?;
-        let rdlen = u16::unpack(buf)?;
+impl Readable for RHeader {
+    type Error = BufferError;
+
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+        let name = Name::read::<E>(buf)?;
+        let ty = Type::read::<E>(buf)?;
+        let class = Class::read::<E>(buf)?;
+        let ttl = u32::read::<E>(buf)?;
+        let rdlen = u16::read::<E>(buf)?;
 
         Ok(Self {
             name,
@@ -44,13 +43,19 @@ impl Unpackable for RHeader {
     }
 }
 
-impl Packable for RHeader {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        self.name.pack(buf)?;
-        self.ty.pack(buf)?;
-        self.class.pack(buf)?;
-        self.ttl.pack(buf)?;
-        self.rdlen.pack(buf)
+impl Writeable for RHeader {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = bytes_written! {
+            self.name.write::<E>(buf)?;
+        self.ty.write::<E>(buf)?;
+        self.class.write::<E>(buf)?;
+        self.ttl.write::<E>(buf)?;
+        self.rdlen.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 

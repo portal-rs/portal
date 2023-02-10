@@ -3,15 +3,12 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr},
 };
 
-use crate::{
-    error::ProtocolError,
-    packing::{
-        PackBuffer, PackBufferResult, Packable, UnpackBuffer, UnpackBufferResult, Unpackable,
-    },
-    types::{
-        dns::Name,
-        rr::{RHeader, Type},
-    },
+use binbuf::prelude::*;
+use thiserror::Error;
+
+use crate::types::{
+    dns::{Name, NameError},
+    rr::{RHeader, Type},
 };
 
 mod hinfo;
@@ -48,6 +45,24 @@ impl Display for RDataParseError {
 impl RDataParseError {
     pub fn new(ty: Type, msg: String) -> Self {
         Self { msg, ty }
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum RDataError {
+    #[error("Name error: {0}")]
+    NameError(#[from] NameError),
+
+    #[error("Invalid RDATA len - expected {expected}, got {got}")]
+    InvalidRDataLen { expected: u16, got: u16 },
+
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
+}
+
+impl From<RDataError> for BufferError {
+    fn from(error: RDataError) -> Self {
+        BufferError::Other(error.to_string())
     }
 }
 
@@ -355,47 +370,51 @@ impl Display for RData {
     }
 }
 
-impl Packable for RData {
-    fn pack(&self, buf: &mut PackBuffer) -> PackBufferResult {
-        match self {
-            RData::A(a) => a.pack(buf),
-            RData::NS(ns) => ns.pack(buf),
-            RData::CNAME(cname) => cname.pack(buf),
-            RData::SOA(soa) => soa.pack(buf),
-            RData::NULL(null) => null.pack(buf),
-            RData::PTR(ptr) => ptr.pack(buf),
-            RData::HINFO(hinfo) => hinfo.pack(buf),
-            RData::MINFO(minfo) => minfo.pack(buf),
-            RData::MX(mx) => mx.pack(buf),
-            RData::TXT(txt) => txt.pack(buf),
-            RData::AAAA(aaaa) => aaaa.pack(buf),
-            RData::OPT(opt) => opt.pack(buf),
+impl Writeable for RData {
+    type Error = BufferError;
+
+    fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
+        let n = match self {
+            RData::A(a) => a.write::<E>(buf)?,
+            RData::NS(ns) => ns.write::<E>(buf)?,
+            RData::CNAME(cname) => cname.write::<E>(buf)?,
+            RData::SOA(soa) => soa.write::<E>(buf)?,
+            RData::NULL(null) => null.write::<E>(buf)?,
+            RData::PTR(ptr) => ptr.write::<E>(buf)?,
+            RData::HINFO(hinfo) => hinfo.write::<E>(buf)?,
+            RData::MINFO(minfo) => minfo.write::<E>(buf)?,
+            RData::MX(mx) => mx.write::<E>(buf)?,
+            RData::TXT(txt) => txt.write::<E>(buf)?,
+            RData::AAAA(aaaa) => aaaa.write::<E>(buf)?,
+            RData::OPT(opt) => opt.write::<E>(buf)?,
             RData::AXFR => todo!(),
             RData::MAILB => todo!(),
             RData::MAILA => todo!(),
             RData::ANY => todo!(),
             RData::UNKNOWN => todo!(),
-        }
+        };
+
+        Ok(n)
     }
 }
 
 impl RData {
-    pub fn unpack(buf: &mut UnpackBuffer, header: &RHeader) -> UnpackBufferResult<Self> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, header: &RHeader) -> Result<Self, RDataError> {
         let buf_offset_start = buf.offset();
 
-        let result = match header.ty() {
-            Type::A => Ipv4Addr::unpack(buf).map(Self::A),
-            Type::NS => Name::unpack(buf).map(Self::NS),
-            Type::CNAME => Name::unpack(buf).map(Self::CNAME),
-            Type::SOA => SOA::unpack(buf).map(Self::SOA),
-            Type::NULL => NULL::unpack(buf, header.rdlen()).map(Self::NULL),
-            Type::PTR => Name::unpack(buf).map(Self::PTR),
-            Type::HINFO => HINFO::unpack(buf).map(Self::HINFO),
-            Type::MINFO => MINFO::unpack(buf).map(Self::MINFO),
-            Type::MX => MX::unpack(buf).map(Self::MX),
-            Type::TXT => TXT::unpack(buf, header.rdlen()).map(Self::TXT),
-            Type::AAAA => Ipv6Addr::unpack(buf).map(Self::AAAA),
-            Type::OPT => OPT::unpack(buf, header).map(Self::OPT),
+        let rdata = match header.ty() {
+            Type::A => Self::A(Ipv4Addr::read::<E>(buf)?),
+            Type::NS => Self::NS(Name::read::<E>(buf)?),
+            Type::CNAME => Self::CNAME(Name::read::<E>(buf)?),
+            Type::SOA => Self::SOA(SOA::read::<E>(buf)?),
+            Type::NULL => Self::NULL(NULL::read::<E>(buf, header.rdlen())?),
+            Type::PTR => Self::PTR(Name::read::<E>(buf)?),
+            Type::HINFO => Self::HINFO(HINFO::read::<E>(buf)?),
+            Type::MINFO => Self::MINFO(MINFO::read::<E>(buf)?),
+            Type::MX => Self::MX(MX::read::<E>(buf)?),
+            Type::TXT => Self::TXT(TXT::read::<E>(buf, header.rdlen())?),
+            Type::AAAA => Self::AAAA(Ipv6Addr::read::<E>(buf)?),
+            Type::OPT => Self::OPT(OPT::read::<E>(buf, header)?),
             Type::AXFR => todo!(),
             Type::MAILB => todo!(),
             Type::MAILA => todo!(),
@@ -403,19 +422,14 @@ impl RData {
             Type::UNKNOWN(_) => todo!(),
         };
 
-        let rdata = match result {
-            Ok(rdata) => rdata,
-            Err(err) => return Err(err),
-        };
-
         // Check that we read the correct number of octets defined by RDLEN
         let length_read = (buf.offset() - buf_offset_start) as u16;
         let length_expected = header.rdlen();
 
         if length_read != length_expected {
-            return Err(ProtocolError::InvalidRDataLenRead {
+            return Err(RDataError::InvalidRDataLen {
                 expected: length_expected,
-                found: length_read,
+                got: length_read,
             });
         }
 
