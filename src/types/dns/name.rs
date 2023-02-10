@@ -39,6 +39,7 @@ pub enum NameError {
     BufferError(#[from] BufferError),
 }
 
+// TODO (Techassi): Remove this
 impl From<NameError> for BufferError {
     fn from(error: NameError) -> Self {
         Self::Other(error.to_string())

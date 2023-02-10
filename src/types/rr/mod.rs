@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use binbuf::prelude::*;
+use thiserror::Error;
 
 use crate::types::dns::Name;
 
@@ -13,6 +14,18 @@ pub use classes::*;
 pub use rdata::*;
 pub use rheader::*;
 pub use types::*;
+
+#[derive(Debug, Error)]
+pub enum RecordError {
+    #[error("RHeader error")]
+    RHeaderError(#[from] RHeaderError),
+
+    #[error("RData error")]
+    RDataError(#[from] RDataError),
+
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Record {
@@ -35,7 +48,7 @@ impl Display for Record {
 }
 
 impl Readable for Record {
-    type Error = BufferError;
+    type Error = RecordError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let header = RHeader::read::<E>(buf)?;
@@ -46,7 +59,7 @@ impl Readable for Record {
 }
 
 impl Writeable for Record {
-    type Error = BufferError;
+    type Error = RecordError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {

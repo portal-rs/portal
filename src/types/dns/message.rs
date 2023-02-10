@@ -1,15 +1,31 @@
 use std::fmt::Display;
 
 use binbuf::prelude::*;
+use thiserror::Error;
 
 use crate::{
     constants,
     resolver::ResultRecords,
     types::{
-        dns::{Header, Question},
-        rr::{RData, Record, SOA},
+        dns::{Header, HeaderError, Question, QuestionError},
+        rr::{RData, Record, RecordError, SOA},
     },
 };
+
+#[derive(Debug, Error)]
+pub enum MessageError {
+    #[error("Header error: {0}")]
+    HeaderError(#[from] HeaderError),
+
+    #[error("Question error: {0}")]
+    QuestionError(#[from] QuestionError),
+
+    #[error("Record error: {0}")]
+    RecordError(#[from] RecordError),
+
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
+}
 
 /// [`Message`] describes a complete DNS message describes in RFC 1035
 /// Section 4. See https://datatracker.ietf.org/doc/html/rfc1035#section-4
@@ -48,7 +64,7 @@ impl Display for Message {
 }
 
 impl Writeable for Message {
-    type Error = BufferError;
+    type Error = MessageError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {
@@ -297,23 +313,23 @@ impl Message {
         false
     }
 
-    /// Unpack the complete DNS [`Message`] based on the already unpacked [`Header`].
-    pub fn read<E: Endianness>(buf: &mut ReadBuffer, header: Header) -> Result<Self, BufferError> {
+    /// Read the complete DNS [`Message`] based on the already unpacked [`Header`].
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, header: Header) -> Result<Self, MessageError> {
         let mut message = Self::new_with_header(header);
 
-        // Unpack questions
+        // Read questions
         let questions = read_questions::<E>(buf, message.qdcount())?;
         message.set_questions(questions);
 
-        // Unpack answer records. This will most likely be empty for requests
+        // Read answer records. This will most likely be empty for requests
         let answers = read_rrs::<E>(buf, message.ancount())?;
         message.set_answers(answers);
 
-        // Unpack authority records
+        // Read authority records
         let authorities = read_rrs::<E>(buf, message.nscount())?;
         message.set_authorities(authorities);
 
-        // Unpack additional records
+        // Read additional records
         let additionals = read_rrs::<E>(buf, message.arcount())?;
         message.set_additionals(additionals);
 
@@ -324,7 +340,7 @@ impl Message {
 fn read_questions<E: Endianness>(
     buf: &mut ReadBuffer,
     count: u16,
-) -> Result<Vec<Question>, BufferError> {
+) -> Result<Vec<Question>, QuestionError> {
     let mut questions: Vec<Question> = Vec::new();
 
     // Let's do a naive approach and assume the QDCOUNT is correct
@@ -339,7 +355,7 @@ fn read_questions<E: Endianness>(
     Ok(questions)
 }
 
-fn read_rrs<E: Endianness>(buf: &mut ReadBuffer, count: u16) -> Result<Vec<Record>, BufferError> {
+fn read_rrs<E: Endianness>(buf: &mut ReadBuffer, count: u16) -> Result<Vec<Record>, RecordError> {
     let mut rrs: Vec<Record> = Vec::new();
 
     for _ in 0..count {

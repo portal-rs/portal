@@ -1,9 +1,19 @@
 use binbuf::prelude::*;
+use thiserror::Error;
 
 use crate::types::{
-    dns::Name,
+    dns::{Name, NameError},
     rr::{Class, Type},
 };
+
+#[derive(Debug, Error)]
+pub enum RHeaderError {
+    #[error("Name error: {0}")]
+    NameError(#[from] NameError),
+
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct RHeader {
@@ -24,7 +34,7 @@ impl ToString for RHeader {
 }
 
 impl Readable for RHeader {
-    type Error = BufferError;
+    type Error = RHeaderError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let name = Name::read::<E>(buf)?;
@@ -44,15 +54,15 @@ impl Readable for RHeader {
 }
 
 impl Writeable for RHeader {
-    type Error = BufferError;
+    type Error = RHeaderError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {
             self.name.write::<E>(buf)?;
-        self.ty.write::<E>(buf)?;
-        self.class.write::<E>(buf)?;
-        self.ttl.write::<E>(buf)?;
-        self.rdlen.write::<E>(buf)?
+            self.ty.write::<E>(buf)?;
+            self.class.write::<E>(buf)?;
+            self.ttl.write::<E>(buf)?;
+            self.rdlen.write::<E>(buf)?
         };
 
         Ok(n)

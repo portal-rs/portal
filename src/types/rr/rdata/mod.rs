@@ -60,12 +60,6 @@ pub enum RDataError {
     BufferError(#[from] BufferError),
 }
 
-impl From<RDataError> for BufferError {
-    fn from(error: RDataError) -> Self {
-        BufferError::Other(error.to_string())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum RData {
     /// ```text
@@ -371,7 +365,7 @@ impl Display for RData {
 }
 
 impl Writeable for RData {
-    type Error = BufferError;
+    type Error = RDataError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = match self {

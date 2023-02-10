@@ -1,14 +1,24 @@
 use std::fmt::Display;
 
 use binbuf::prelude::*;
+use thiserror::Error;
 
 use crate::{
     constants,
     types::{
-        dns::{Name, Query},
+        dns::{Name, NameError, Query},
         rr::{Class, Type},
     },
 };
+
+#[derive(Debug, Error)]
+pub enum QuestionError {
+    #[error("Name error: {0}")]
+    NameError(#[from] NameError),
+
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
+}
 
 /// [`Question`] describes a DNS question. The RFC allows multiple questions
 /// per message, but most DNS servers only accept one and multiple questions
@@ -41,7 +51,7 @@ impl From<Query> for Question {
 }
 
 impl Readable for Question {
-    type Error = BufferError;
+    type Error = QuestionError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let name = Name::read::<E>(buf)?;
@@ -53,7 +63,7 @@ impl Readable for Question {
 }
 
 impl Writeable for Question {
-    type Error = BufferError;
+    type Error = QuestionError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {

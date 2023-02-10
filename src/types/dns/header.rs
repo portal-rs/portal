@@ -1,6 +1,13 @@
 use binbuf::prelude::*;
+use thiserror::Error;
 
 use crate::types::{opcode::Opcode, rcode::Rcode};
+
+#[derive(Debug, Error)]
+pub enum HeaderError {
+    #[error("Buffer error: {0}")]
+    BufferError(#[from] BufferError),
+}
 
 /// [`Header`] describes the header data of a message. This header format enables easy access to all header fields. The
 /// [`RawHeader`] in comparison stores raw data directly from the wire.
@@ -63,7 +70,7 @@ impl From<RawHeader> for Header {
 }
 
 impl Readable for Header {
-    type Error = BufferError;
+    type Error = HeaderError;
 
     /// Unpacks the first 12 octets from the DNS message. The DNS header is
     /// fixed in size. The function returns the [`Header`] it self and the
@@ -91,7 +98,7 @@ impl Readable for Header {
 }
 
 impl Writeable for Header {
-    type Error = BufferError;
+    type Error = HeaderError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let raw_header = RawHeader::from(self);
@@ -123,15 +130,19 @@ pub struct RawHeader {
 }
 
 impl Writeable for RawHeader {
-    type Error = BufferError;
+    type Error = HeaderError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
-        self.id.write::<E>(buf)?;
-        self.flags.write::<E>(buf)?;
-        self.qdcount.write::<E>(buf)?;
-        self.ancount.write::<E>(buf)?;
-        self.nscount.write::<E>(buf)?;
-        self.arcount.write::<E>(buf)
+        let n = bytes_written! {
+            self.id.write::<E>(buf)?;
+            self.flags.write::<E>(buf)?;
+            self.qdcount.write::<E>(buf)?;
+            self.ancount.write::<E>(buf)?;
+            self.nscount.write::<E>(buf)?;
+            self.arcount.write::<E>(buf)?
+        };
+
+        Ok(n)
     }
 }
 
