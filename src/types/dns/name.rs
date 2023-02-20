@@ -60,18 +60,16 @@ impl Readable for Name {
 
         // If we immediately encounter a null byte, the name is root "."
         // This can be simplified when if let chains are stabilized. The
-        // current solution is ugly ngl...
+        // current solution is a little more verbose than I like it
+        // to be...
         //
         // if let Some(b) = buf.peek() && b == 0 {
         //     buf.pop();
         //     return Ok(name);
         // }
-        match buf.peek() {
-            Some(b) if b == 0 => {
-                buf.pop()?;
-                return Ok(name);
-            }
-            _ => {}
+        if buf.peek().filter(|b| *b == 0).is_some() {
+            buf.pop()?;
+            return Ok(name);
         }
 
         loop {
