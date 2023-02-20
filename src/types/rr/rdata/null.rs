@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use binbuf::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct NULL {
     data: Vec<u8>,
 }
@@ -23,7 +23,7 @@ impl Writeable for NULL {
 
 impl NULL {
     pub fn new() -> Self {
-        Self { data: Vec::new() }
+        Self::default()
     }
 
     pub fn read<E: Endianness>(buf: &mut ReadBuffer, rdlen: u16) -> Result<Self, BufferError> {

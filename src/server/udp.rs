@@ -19,7 +19,7 @@ pub async fn handle(buf: &[u8], session: Session, res: Arc<impl resolver::ToReso
     let header = match Header::read_be(&mut buf) {
         Ok(result) => result,
         Err(err) => {
-            println!("{}", err);
+            println!("{err}");
             return;
         }
     };
@@ -31,7 +31,7 @@ pub async fn handle(buf: &[u8], session: Session, res: Arc<impl resolver::ToReso
             let mut message = match Message::read::<BigEndian>(&mut buf, header) {
                 Ok(msg) => msg,
                 Err(err) => {
-                    println!("{}", err);
+                    println!("{err}");
                     return;
                 }
             };
@@ -81,16 +81,16 @@ async fn handle_response(message: &mut Message, session: Session) {
     message.set_is_response(true);
     message.set_rec_avail(true);
 
-    println!("{:?}", message);
+    println!("{message:?}");
 
     if let Err(err) = message.write::<BigEndian>(&mut buf) {
         // TODO (Techassi): Return message with RCODE 2
-        println!("{}", err);
+        println!("{err}");
         return;
     }
 
     // TODO (Techassi): Think about where we should handle the IO errors
     if let Err(err) = session.socket.send_to(buf.bytes(), session.addr).await {
-        println!("{}", err);
+        println!("{err}");
     };
 }

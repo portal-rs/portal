@@ -147,7 +147,7 @@ impl ToResolver for RecursiveResolver {
                 target_candidates.clear();
                 target_candidates.append(&mut ip_addrs);
                 println!("FOUND GLUE!");
-                println!("NEW TARGETS: {:#?}", target_candidates);
+                println!("NEW TARGETS: {target_candidates:#?}");
                 continue;
             }
 

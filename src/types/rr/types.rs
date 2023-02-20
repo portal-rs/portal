@@ -104,7 +104,7 @@ impl Display for Type {
             Type::MAILB => write!(f, "MAILB"),
             Type::MAILA => write!(f, "MAILA"),
             Type::ANY => write!(f, "ANY"),
-            Type::UNKNOWN(c) => write!(f, "UNKNOWN({})", c),
+            Type::UNKNOWN(c) => write!(f, "UNKNOWN({c})"),
         }
     }
 }
@@ -168,9 +168,9 @@ impl From<u16> for Type {
     }
 }
 
-impl Into<u16> for Type {
-    fn into(self) -> u16 {
-        match self {
+impl From<Type> for u16 {
+    fn from(value: Type) -> Self {
+        match value {
             Type::A => 1,
             Type::NS => 2,
             Type::CNAME => 5,
@@ -192,8 +192,8 @@ impl Into<u16> for Type {
     }
 }
 
-impl Into<u16> for &Type {
-    fn into(self) -> u16 {
-        (*self).into()
+impl From<&Type> for u16 {
+    fn from(value: &Type) -> Self {
+        Self::from(*value)
     }
 }

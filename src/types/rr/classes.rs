@@ -63,7 +63,7 @@ impl Display for Class {
             Class::CH => write!(f, "CH"),
             Class::HS => write!(f, "HS"),
             Class::ANY => write!(f, "ANY"),
-            Class::UNKNOWN(c) => write!(f, "UNKNOWN({})", c),
+            Class::UNKNOWN(c) => write!(f, "UNKNOWN({c})"),
         }
     }
 }
@@ -96,9 +96,9 @@ impl From<u16> for Class {
     }
 }
 
-impl Into<u16> for Class {
-    fn into(self) -> u16 {
-        match self {
+impl From<Class> for u16 {
+    fn from(value: Class) -> Self {
+        match value {
             Class::IN => 1,
             Class::CS => 2,
             Class::CH => 3,
@@ -109,8 +109,8 @@ impl Into<u16> for Class {
     }
 }
 
-impl Into<u16> for &Class {
-    fn into(self) -> u16 {
-        (*self).into()
+impl From<&Class> for u16 {
+    fn from(value: &Class) -> Self {
+        Self::from(*value)
     }
 }

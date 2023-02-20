@@ -16,7 +16,7 @@ impl Display for TXT {
             "{}",
             self.data
                 .iter()
-                .map(|v| format!("  {:?}", v))
+                .map(|v| format!("  {v:?}"))
                 .collect::<String>()
         )
     }
@@ -52,7 +52,7 @@ impl TXT {
     }
 
     /// Returns the length of the [`TXT`] record.
-    pub fn len(&self) -> usize {
+    pub fn size(&self) -> usize {
         let mut len = 0;
 
         for v in &self.data {

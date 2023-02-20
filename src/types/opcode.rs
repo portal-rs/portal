@@ -31,9 +31,9 @@ impl From<u16> for Opcode {
     }
 }
 
-impl Into<u16> for Opcode {
-    fn into(self) -> u16 {
-        match self {
+impl From<Opcode> for u16 {
+    fn from(value: Opcode) -> Self {
+        match value {
             Opcode::Query => 0,
             Opcode::IQuery => 1,
             Opcode::Status => 2,

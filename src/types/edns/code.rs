@@ -115,9 +115,9 @@ impl From<u16> for OptionCode {
     }
 }
 
-impl Into<u16> for OptionCode {
-    fn into(self) -> u16 {
-        match self {
+impl From<OptionCode> for u16 {
+    fn from(value: OptionCode) -> Self {
+        match value {
             OptionCode::RESERVED(_) => todo!(),
             OptionCode::RESERVEDLOCAL(_) => todo!(),
             OptionCode::UNASSIGNED => todo!(),
@@ -143,8 +143,8 @@ impl Into<u16> for OptionCode {
     }
 }
 
-impl Into<u16> for &OptionCode {
-    fn into(self) -> u16 {
-        (*self).into()
+impl From<&OptionCode> for u16 {
+    fn from(value: &OptionCode) -> Self {
+        Self::from(*value)
     }
 }

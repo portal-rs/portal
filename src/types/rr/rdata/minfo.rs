@@ -41,7 +41,7 @@ impl Writeable for MINFO {
 }
 
 impl MINFO {
-    pub fn len(&self) -> usize {
-        self.rmailbx.len() + self.emailbx.len()
+    pub fn size(&self) -> usize {
+        self.rmailbx.size() + self.emailbx.size()
     }
 }

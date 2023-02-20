@@ -178,7 +178,7 @@ async fn wait_for_query_response(session: Session) -> ClientResult<Message> {
             }
             Err(err) => {
                 // TODO (Techassi): Log this
-                println!("{}", err);
+                println!("{err}");
                 continue;
             }
         };

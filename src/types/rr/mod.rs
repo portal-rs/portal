@@ -110,12 +110,12 @@ impl Record {
     }
 
     pub fn normalize_rdlen(&mut self) -> &mut Self {
-        self.header.set_rdlen(self.len() as u16);
+        self.header.set_rdlen(self.size() as u16);
         self
     }
 
-    pub fn len(&self) -> usize {
-        self.data.len()
+    pub fn size(&self) -> usize {
+        self.data.size()
     }
 
     pub fn is_edns(&self) -> bool {

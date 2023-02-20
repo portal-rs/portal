@@ -255,21 +255,21 @@ impl Message {
         self.header.arcount
     }
 
-    /// Returns the length of this DNS [`Message`].
-    pub fn len(&self) -> usize {
+    /// Returns the size of this DNS [`Message`].
+    pub fn size(&self) -> usize {
         let mut len = constants::dns::HEADER_LENGTH;
-        len += self.question[0].len();
+        len += self.question[0].size();
 
         for answer in &self.answers {
-            len += answer.len();
+            len += answer.size();
         }
 
         for authority in &self.authorities {
-            len += authority.len();
+            len += authority.size();
         }
 
         for additional in &self.additionals {
-            len += additional.len();
+            len += additional.size();
         }
 
         len

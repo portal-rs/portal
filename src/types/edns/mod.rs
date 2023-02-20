@@ -47,7 +47,7 @@ impl Option {
         self.code
     }
 
-    pub fn len(&self) -> u16 {
+    pub fn size(&self) -> u16 {
         self.len
     }
 }

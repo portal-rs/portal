@@ -83,9 +83,9 @@ impl From<u16> for Rcode {
     }
 }
 
-impl Into<u16> for Rcode {
-    fn into(self) -> u16 {
-        match self {
+impl From<Rcode> for u16 {
+    fn from(value: Rcode) -> Self {
+        match value {
             Rcode::NoError => 0,
             Rcode::FormatError => 1,
             Rcode::ServerFailure => 2,

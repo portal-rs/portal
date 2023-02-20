@@ -21,10 +21,10 @@ impl Readable for HINFO {
 
     fn read<E: binbuf::Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let cpu = buf
-            .read_char_string(Some(constants::dns::MAX_CHAR_STRING_LENGTH.into()))?
+            .read_char_string(Some(constants::dns::MAX_CHAR_STRING_LENGTH))?
             .to_vec();
         let os = buf
-            .read_char_string(Some(constants::dns::MAX_CHAR_STRING_LENGTH.into()))?
+            .read_char_string(Some(constants::dns::MAX_CHAR_STRING_LENGTH))?
             .to_vec();
 
         Ok(Self { cpu, os })
@@ -47,7 +47,7 @@ impl Writeable for HINFO {
 }
 
 impl HINFO {
-    pub fn len(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.cpu.len() + self.os.len()
     }
 }

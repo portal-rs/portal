@@ -79,7 +79,7 @@ impl Server {
                 }
                 Err(err) => {
                     // TODO (Techassi): Log this
-                    println!("{}", err);
+                    println!("{err}");
                     continue;
                 }
             };

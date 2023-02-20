@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::types::{
     dns::{Label, Name},
-    rr::{Record, Type},
+    rr::Record,
 };
 
 #[derive(Debug, Error)]
@@ -18,8 +18,8 @@ pub struct Tree {
     nodes: Vec<Node<Record>>,
 }
 
-impl Tree {
-    pub fn new() -> Self {
+impl Default for Tree {
+    fn default() -> Self {
         Self {
             nodes: vec![Node {
                 index: 0,
@@ -28,6 +28,12 @@ impl Tree {
                 records: Vec::new(),
             }],
         }
+    }
+}
+
+impl Tree {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn root(&self) -> &Node<Record> {

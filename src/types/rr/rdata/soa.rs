@@ -74,11 +74,11 @@ impl Display for SOA {
 }
 
 impl SOA {
-    /// Returns the length of the [`SOA`] record.
-    pub fn len(&self) -> usize {
+    /// Returns the size of the [`SOA`] record.
+    pub fn size(&self) -> usize {
         // Returns the sum of MNAME's len, RNAME's len and a fixed length. The
         // fixed part is 5 x 4 octets for five u32.
-        self.mname.len() + self.rname.len() + 20
+        self.mname.size() + self.rname.size() + 20
     }
 
     pub fn get_mname(&self) -> &Name {

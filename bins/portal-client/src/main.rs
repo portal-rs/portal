@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
         ;; MSG SIZE: {}",
         dur.as_millis(),
         socket_addr,
-        msg.len(),
+        msg.size(),
     );
     Ok(())
 }

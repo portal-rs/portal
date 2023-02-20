@@ -77,9 +77,9 @@ impl Writeable for Question {
 }
 
 impl Question {
-    /// Returns the length of this [`Question`] by adding up the length of the
+    /// Returns the size of this [`Question`] by adding up the length of the
     /// domain name and the fixed length (QTYPE and QCLASS).
-    pub fn len(&self) -> usize {
-        self.name.len() + constants::dns::QUESTION_FIXED_LENGTH
+    pub fn size(&self) -> usize {
+        self.name.size() + constants::dns::QUESTION_FIXED_LENGTH
     }
 }

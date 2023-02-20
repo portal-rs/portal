@@ -46,15 +46,15 @@ impl Display for ResultRecords {
             "Resolve results: \n  AN: {}\n  NS: {} \n  AR: {}",
             self.answers
                 .iter()
-                .map(|r| format!("    {}\n", r.to_string()))
+                .map(|r| format!("    {r}\n"))
                 .collect::<String>(),
             self.authorities
                 .iter()
-                .map(|r| format!("    {}\n", r.to_string()))
+                .map(|r| format!("    {r}\n"))
                 .collect::<String>(),
             self.additionals
                 .iter()
-                .map(|r| format!("    {}\n", r.to_string()))
+                .map(|r| format!("    {r}\n"))
                 .collect::<String>(),
         )
     }

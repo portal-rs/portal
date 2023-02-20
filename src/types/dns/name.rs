@@ -112,11 +112,10 @@ impl Readable for Name {
                     // Read the label based on the label length byte. This
                     // returns an error if the label length exceeds the maximum
                     // domain name label length of 63
-                    let bytes =
-                        match buf.read_char_string(Some(constants::dns::MAX_LABEL_LENGTH.into())) {
-                            Ok(bytes) => bytes,
-                            Err(_) => return Err(NameError::DomainNameLabelTooLong),
-                        };
+                    let bytes = match buf.read_char_string(Some(constants::dns::MAX_LABEL_LENGTH)) {
+                        Ok(bytes) => bytes,
+                        Err(_) => return Err(NameError::DomainNameLabelTooLong),
+                    };
 
                     // Add the label to the domain name. This returns an error
                     // if the domain name length exceeds the maximum domain
@@ -293,7 +292,7 @@ impl Name {
     /// # Ok::<(), portal::types::dns::NameError>(())
     /// ```
     pub fn add_label(&mut self, label: Label) -> Result<(), NameError> {
-        if self.len() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
+        if self.size() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
             return Err(NameError::DomainNameTooLong);
         }
 
@@ -372,7 +371,7 @@ impl Name {
         self.labels.len() + 1
     }
 
-    /// Returns the total length (in bytes) required in the wire format. This
+    /// Returns the total size (in bytes) required in the wire format. This
     /// includes the length octets between labels and the terminating null byte
     /// (or root ".").
     ///
@@ -384,7 +383,7 @@ impl Name {
     /// let n = Name::try_from("www.example.com").unwrap();
     /// assert_eq!(n.len(), 17);
     /// ```
-    pub fn len(&self) -> usize {
+    pub fn size(&self) -> usize {
         let dots = self.num_labels_root();
 
         let mut labels = 0;
@@ -523,6 +522,10 @@ impl Label {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 

@@ -343,18 +343,18 @@ impl Default for RData {
 impl Display for RData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RData::A(a) => write!(f, "{}", a),
-            RData::NS(ns) => write!(f, "{}", ns),
-            RData::CNAME(cname) => write!(f, "{}", cname),
-            RData::SOA(soa) => write!(f, "{}", soa),
-            RData::NULL(null) => write!(f, "{}", null),
-            RData::PTR(ptr) => write!(f, "{}", ptr),
-            RData::HINFO(hinfo) => write!(f, "{}", hinfo),
-            RData::MINFO(minfo) => write!(f, "{}", minfo),
-            RData::MX(mx) => write!(f, "{}", mx),
-            RData::TXT(txt) => write!(f, "{}", txt),
-            RData::AAAA(aaaa) => write!(f, "{}", aaaa),
-            RData::OPT(opt) => write!(f, "{}", opt),
+            RData::A(a) => write!(f, "{a}"),
+            RData::NS(ns) => write!(f, "{ns}"),
+            RData::CNAME(cname) => write!(f, "{cname}"),
+            RData::SOA(soa) => write!(f, "{soa}"),
+            RData::NULL(null) => write!(f, "{null}"),
+            RData::PTR(ptr) => write!(f, "{ptr}"),
+            RData::HINFO(hinfo) => write!(f, "{hinfo}"),
+            RData::MINFO(minfo) => write!(f, "{minfo}"),
+            RData::MX(mx) => write!(f, "{mx}"),
+            RData::TXT(txt) => write!(f, "{txt}"),
+            RData::AAAA(aaaa) => write!(f, "{aaaa}"),
+            RData::OPT(opt) => write!(f, "{opt}"),
             RData::AXFR => todo!(),
             RData::MAILB => todo!(),
             RData::MAILA => todo!(),
@@ -465,19 +465,19 @@ impl RData {
         }
     }
 
-    /// Returns the length of RDATA
-    pub fn len(&self) -> usize {
+    /// Returns the size of RDATA
+    pub fn size(&self) -> usize {
         match self {
             RData::A(_) => 4,
-            RData::NS(ns) => ns.len(),
-            RData::CNAME(cname) => cname.len(),
-            RData::SOA(soa) => soa.len(),
+            RData::NS(ns) => ns.size(),
+            RData::CNAME(cname) => cname.size(),
+            RData::SOA(soa) => soa.size(),
             RData::NULL(_) => 0,
-            RData::PTR(ptr) => ptr.len(),
-            RData::HINFO(hinfo) => hinfo.len(),
-            RData::MINFO(minfo) => minfo.len(),
-            RData::MX(mx) => mx.len(),
-            RData::TXT(txt) => txt.len(),
+            RData::PTR(ptr) => ptr.size(),
+            RData::HINFO(hinfo) => hinfo.size(),
+            RData::MINFO(minfo) => minfo.size(),
+            RData::MX(mx) => mx.size(),
+            RData::TXT(txt) => txt.size(),
             RData::AAAA(_) => 16,
             RData::OPT(_) => todo!(),
             RData::AXFR => todo!(),

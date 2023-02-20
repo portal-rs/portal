@@ -15,22 +15,12 @@ pub struct Config {
     pub server: ServerOptions,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 #[serde(default)]
 pub struct RawConfig {
     pub collector: RawCollectorOptions,
     pub resolver: RawResolverOptions,
     pub server: RawServerOptions,
-}
-
-impl Default for RawConfig {
-    fn default() -> Self {
-        Self {
-            collector: Default::default(),
-            resolver: Default::default(),
-            server: Default::default(),
-        }
-    }
 }
 
 impl RawConfig {
