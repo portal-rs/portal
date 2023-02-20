@@ -214,7 +214,7 @@ impl FromStr for Zone {
                     };
                 }
                 ZoneParseState::RecordRest(state) => {
-                    // Now we are back in save territory. The rest of the RR
+                    // Now we are back in safe territory. The rest of the RR
                     // has the same format across the board. We now need to
                     // parse the RR type.
                     let ty = match Type::try_from(state.parts[0]) {
