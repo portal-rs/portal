@@ -1,5 +1,8 @@
-/// The compression pointer mask masks the first to bits of the label length / ptr bytes.
-pub const COMPRESSION_POINTER_MASK: u16 = 0x3FFF;
+/// The compression pointer mask masks off the first two bits of the label length / ptr bytes.
+pub const COMP_PTR_MASK: u16 = 0x3FFF;
+
+/// The compression pointer mask masks the last 6 bits of a u8 to extract the upper two bits.
+pub const COMP_PTR: u8 = 0xC0;
 
 /// The maximum character string length is 255 octets.
 pub const MAX_CHAR_STRING_LENGTH: u8 = 255;

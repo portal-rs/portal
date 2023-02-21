@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use binbuf::prelude::*;
 use thiserror::Error;
 
-use crate::constants;
+use crate::constants::dns::{COMP_PTR, COMP_PTR_MASK, MAX_DOMAIN_LENGTH, MAX_LABEL_LENGTH};
 
 enum NameParseState {
     LabelLenOrPointer,
@@ -29,10 +29,10 @@ pub enum NameError {
     #[error("Invalid byte in domain name label")]
     InvalidDomainNameLabelByte,
 
-    #[error("Domain name label too long (< {})", constants::dns::MAX_LABEL_LENGTH)]
+    #[error("Domain name label too long (< {})", MAX_LABEL_LENGTH)]
     DomainNameLabelTooLong,
 
-    #[error("Domain name to long (< {})", constants::dns::MAX_DOMAIN_LENGTH)]
+    #[error("Domain name to long (< {})", MAX_DOMAIN_LENGTH)]
     DomainNameTooLong,
 
     #[error("Buffer error: {0}")]
@@ -80,11 +80,11 @@ impl Readable for Name {
                     Some(0) | None => NameParseState::Root,
 
                     // We encountered a compression pointer, follow it
-                    Some(b) if b & 0xC0 == 0xC0 => NameParseState::Pointer,
+                    Some(b) if b & COMP_PTR == COMP_PTR => NameParseState::Pointer,
 
                     // We encountered a normal label length byte, read
                     // characters until label len
-                    Some(b) if b & 0xC0 == 0x0 => NameParseState::Label,
+                    Some(b) if b & COMP_PTR == 0x0 => NameParseState::Label,
 
                     // A byte which shouldn't be here
                     Some(b) => return Err(NameError::InvalidLabelLenOrPointer(b)),
@@ -93,7 +93,7 @@ impl Readable for Name {
                     // Read a u16 which starts with 11 (0xC0) and apply the bit
                     // mask to extract the actual compression pointer location
                     let pointer_location = match u16::read::<E>(buf) {
-                        Ok(b) => (b & constants::dns::COMPRESSION_POINTER_MASK) as usize,
+                        Ok(b) => (b & COMP_PTR_MASK) as usize,
                         Err(err) => return Err(err.into()),
                     };
 
@@ -112,7 +112,7 @@ impl Readable for Name {
                     // Read the label based on the label length byte. This
                     // returns an error if the label length exceeds the maximum
                     // domain name label length of 63
-                    let bytes = match buf.read_char_string(Some(constants::dns::MAX_LABEL_LENGTH)) {
+                    let bytes = match buf.read_char_string(Some(MAX_LABEL_LENGTH)) {
                         Ok(bytes) => bytes,
                         Err(_) => return Err(NameError::DomainNameLabelTooLong),
                     };
@@ -153,7 +153,7 @@ impl Writeable for Name {
 
         // TODO (Techassi): This does NOT handle compression. Add it
         for label in self.iter() {
-            if label.len() > constants::dns::MAX_LABEL_LENGTH.into() {
+            if label.len() > MAX_LABEL_LENGTH.into() {
                 return Err(NameError::DomainNameLabelTooLong);
             }
 
@@ -165,7 +165,7 @@ impl Writeable for Name {
         buf.push(0);
         n += 1;
 
-        if buf.len() - buffer_len_start > constants::dns::MAX_DOMAIN_LENGTH.into() {
+        if buf.len() - buffer_len_start > MAX_DOMAIN_LENGTH.into() {
             return Err(NameError::DomainNameTooLong);
         }
 
@@ -292,11 +292,11 @@ impl Name {
     /// # Ok::<(), portal::types::dns::NameError>(())
     /// ```
     pub fn add_label(&mut self, label: Label) -> Result<(), NameError> {
-        if self.size() + label.0.len() > constants::dns::MAX_DOMAIN_LENGTH.into() {
+        if self.size() + label.0.len() > MAX_DOMAIN_LENGTH.into() {
             return Err(NameError::DomainNameTooLong);
         }
 
-        if label.0.len() > constants::dns::MAX_LABEL_LENGTH.into() {
+        if label.0.len() > MAX_LABEL_LENGTH.into() {
             return Err(NameError::DomainNameLabelTooLong);
         }
 
@@ -477,7 +477,7 @@ impl TryFrom<&[u8]> for Label {
     type Error = NameError;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if bytes.len() > constants::dns::MAX_LABEL_LENGTH.into() {
+        if bytes.len() > MAX_LABEL_LENGTH.into() {
             return Err(NameError::DomainNameLabelTooLong);
         }
 
