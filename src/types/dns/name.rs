@@ -381,7 +381,7 @@ impl Name {
     /// use portal::types::dns::Name;
     ///
     /// let n = Name::try_from("www.example.com").unwrap();
-    /// assert_eq!(n.len(), 17);
+    /// assert_eq!(n.size(), 17);
     /// ```
     pub fn size(&self) -> usize {
         let dots = self.num_labels_root();

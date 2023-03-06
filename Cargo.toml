@@ -1,7 +1,8 @@
 [workspace]
 members = [
   ".",
-  "bins/*"
+  "bins/*",
+  "crates/*"
 ]
 
 [package]
@@ -11,15 +12,18 @@ edition = "2021"
 
 [dependencies]
 binbuf = { git = "https://github.com/Techassi/binbuf", features = ["derive", "macros"] }
-serde = { version = "1.0.144", features = ["derive"] }
 thiserror = { workspace = true }
+serde = { workspace = true }
 tokio = { workspace = true }
+toml = { workspace = true }
+rand = { workspace = true }
 enum_dispatch = "0.3.8"
 async-trait = "0.1.58"
-toml = "0.5.9"
-rand = "0.8.5"
 
 [workspace.dependencies]
 tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros", "time"] }
+serde = { version = "1.0.144", features = ["derive"] }
 clap = { version = "4.1.4", features = ["derive"] }
 thiserror = "1.0.38"
+toml = "0.5.9"
+rand = "0.8.5"

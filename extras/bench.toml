@@ -1,0 +1,9 @@
+[data]
+types = ["A", "AAAA", "NS"]
+domains = ["example.com"]
+
+[bench]
+delay = 500
+runs = 100
+
+server = "127.0.0.1:53"

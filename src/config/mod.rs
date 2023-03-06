@@ -28,17 +28,8 @@ impl RawConfig {
     /// [`ConfigError`] encountered while reading and parsing. The function
     /// optionally validates the config.
     pub fn from_file(path: PathBuf) -> Result<Self, ConfigError> {
-        let b = match fs::read_to_string(path) {
-            Ok(b) => b,
-            Err(err) => return Err(ConfigError::Read(err)),
-        };
-
-        let c: Self = match toml::from_str(&b) {
-            Ok(c) => c,
-            Err(err) => return Err(ConfigError::Deserialize(err)),
-        };
-
-        Ok(c)
+        let b = fs::read_to_string(path)?;
+        Ok(toml::from_str(&b)?)
     }
 
     /// Validates the [`RawConfig`] and if successful returns a validated
