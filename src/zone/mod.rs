@@ -252,13 +252,8 @@ impl FromStr for Zone {
 impl Zone {
     /// Read a zone from a master zone file.
     pub fn from_file(path: PathBuf) -> Result<Self, ZoneError> {
-        let b = match fs::read_to_string(path) {
-            Ok(b) => b,
-            Err(err) => return Err(ZoneError::IO(err)),
-        };
-
-        let zone: Zone = b.parse()?;
-        Ok(zone)
+        let b = fs::read_to_string(path)?;
+        Ok(b.parse()?)
     }
 
     pub fn to_file(&self, path: PathBuf) -> Result<(), ZoneError> {
