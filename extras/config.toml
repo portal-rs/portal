@@ -1,0 +1,7 @@
+[server]
+address = "0.0.0.0:53"
+
+[resolver]
+hint_file_path = "/etc/named.root"
+max_expire = 300
+mode = "r"
