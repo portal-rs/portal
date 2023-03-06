@@ -1,9 +1,4 @@
-use std::{
-    collections::HashSet,
-    net::SocketAddr,
-    sync::Arc,
-    time::{self, Duration},
-};
+use std::{collections::HashSet, net::SocketAddr, sync::Arc, time::Duration};
 
 use binbuf::prelude::*;
 use rand;
@@ -25,8 +20,8 @@ pub use error::*;
 pub type ClientResult<T> = Result<T, ClientError>;
 
 pub struct Client {
-    write_timeout: time::Duration,
-    read_timeout: time::Duration,
+    write_timeout: u64,
+    read_timeout: u64,
 
     active_ids: Arc<HashSet<u16>>,
     socket: Arc<UdpSocket>,
@@ -76,6 +71,10 @@ impl Client {
         let active_ids = self.active_ids.clone();
         let query = query.to_query();
 
+        // NOTE (Techassi): Can we avoid cloning here?
+        let write_timeout = self.write_timeout.clone();
+        let read_timeout = self.read_timeout.clone();
+
         let session = Session {
             socket: self.socket.clone(),
             addr,
@@ -83,14 +82,7 @@ impl Client {
 
         // TODO (Techassi): Pass the timeouts defined in the client
         let result = tokio::spawn(async move {
-            do_query(
-                query,
-                session,
-                active_ids,
-                time::Duration::from_secs(2),
-                time::Duration::from_secs(2),
-            )
-            .await
+            do_query(query, session, active_ids, write_timeout, read_timeout).await
         });
 
         // TODO (Techassi): Remove transaction ID from active_ids when done
@@ -133,8 +125,8 @@ async fn do_query(
     query: Query,
     session: Session,
     active_ids: Arc<HashSet<u16>>,
-    write_timeout: time::Duration,
-    read_timeout: time::Duration,
+    write_timeout: u64,
+    read_timeout: u64,
 ) -> ClientResult<Message> {
     let id = get_free_transaction_id(active_ids);
 
@@ -143,6 +135,9 @@ async fn do_query(
 
     let mut buf = WriteBuffer::new();
     message.write::<BigEndian>(&mut buf)?;
+
+    let write_timeout = Duration::from_secs(write_timeout);
+    let read_timeout = Duration::from_secs(read_timeout);
 
     // Send DNS query to the remote DNS server
     match timeout(
@@ -218,26 +213,28 @@ fn get_free_transaction_id(active_ids: Arc<HashSet<u16>>) -> u16 {
 
 pub struct ClientBuilder {
     // network: Network,
-    bind_timeout: time::Duration,
-    read_timeout: time::Duration,
-    write_timeout: time::Duration,
+    bind_timeout: u64,
+    read_timeout: u64,
+    write_timeout: u64,
 }
 
 impl Default for ClientBuilder {
     fn default() -> Self {
         Self {
             // network: Network::Udp,
-            bind_timeout: time::Duration::from_secs(2),
-            read_timeout: time::Duration::from_secs(2),
-            write_timeout: time::Duration::from_secs(2),
+            bind_timeout: 2,
+            read_timeout: 2,
+            write_timeout: 2,
         }
     }
 }
 
 impl ClientBuilder {
     pub async fn build(&self) -> Result<Client, ClientError> {
-        let socket = match timeout(self.bind_timeout, UdpSocket::bind("0.0.0.0:0")).await {
-            TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(self.bind_timeout)),
+        let bind_timeout = Duration::from_secs(self.bind_timeout);
+
+        let socket = match timeout(bind_timeout, UdpSocket::bind("0.0.0.0:0")).await {
+            TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(bind_timeout)),
             TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
             TimeoutResult::Ok(socket) => socket,
         };
@@ -250,12 +247,12 @@ impl ClientBuilder {
         })
     }
 
-    pub fn with_bind_timeout(&mut self, bind_timeout: time::Duration) -> &Self {
+    pub fn with_bind_timeout(&mut self, bind_timeout: u64) -> &Self {
         self.bind_timeout = bind_timeout;
         self
     }
 
-    pub fn with_read_timeout(&mut self, read_timeout: time::Duration) -> &Self {
+    pub fn with_read_timeout(&mut self, read_timeout: u64) -> &Self {
         self.read_timeout = read_timeout;
         self
     }
