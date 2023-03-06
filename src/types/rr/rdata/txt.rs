@@ -16,7 +16,7 @@ impl Display for TXT {
             "{}",
             self.data
                 .iter()
-                .map(|v| format!("  {v:?}"))
+                .map(|v| format!("  {}", String::from_utf8(v.clone()).unwrap()))
                 .collect::<String>()
         )
     }
