@@ -1,6 +1,7 @@
 use std::{error::Error, fmt::Display, str::FromStr};
 
 use binbuf::prelude::*;
+use serde::Serialize;
 
 #[derive(Debug)]
 pub struct TypeParseError(String);
@@ -15,7 +16,7 @@ impl Display for TypeParseError {
 
 /// [`Type`] describes resource record types.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum Type {
     /// A host address
     A,

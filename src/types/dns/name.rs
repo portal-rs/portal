@@ -1,6 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use binbuf::prelude::*;
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::constants::dns::{COMP_PTR, COMP_PTR_MASK, MAX_DOMAIN_LENGTH, MAX_LABEL_LENGTH};
@@ -46,7 +47,7 @@ impl From<NameError> for BufferError {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct Name {
     labels: Vec<Label>,
 }
@@ -470,7 +471,7 @@ impl<'a> DoubleEndedIterator for NameIterator<'a> {
 
 impl<'a> ExactSizeIterator for NameIterator<'a> {}
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize)]
 pub struct Label(Vec<u8>);
 
 impl TryFrom<&[u8]> for Label {

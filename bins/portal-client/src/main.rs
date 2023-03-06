@@ -1,4 +1,5 @@
 use std::{
+    fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
     time::Duration,
@@ -20,7 +21,7 @@ use portal::{
     },
 };
 
-use crate::bench::BenchConfig;
+use crate::bench::{BenchConfig, BenchResult, BenchSummary};
 
 mod bench;
 
@@ -51,7 +52,7 @@ struct Cli {
     bench_file: Option<PathBuf>,
 
     /// Benchmark results output file
-    #[arg(long, default_value = "./out.json")]
+    #[arg(long, default_value = "./bench.json")]
     bench_output: PathBuf,
 }
 
@@ -141,6 +142,9 @@ async fn do_bench(bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
     );
     let mut spinner = Spinner::new(spinners::Dots, "Running benchmark...", Color::White);
 
+    // Prepare result vector
+    let mut results = Vec::new();
+
     // TODO (Techassi): Make this whole benchmark run in a tokio task
     // Iterate over all the runs
     for (name_index, type_index) in runs.iter().zip(types) {
@@ -149,14 +153,33 @@ async fn do_bench(bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
         let name = &config.data.domains[*name_index];
         let ty = &config.data.types[type_index];
 
-        let (msg, dur) = client
+        match client
             .query_duration((name, ty, &Class::IN), config.server)
-            .await?;
+            .await
+        {
+            Ok((_msg, dur)) => results.push(BenchResult::success(current_run, name, ty, dur)),
+            Err(err) => results.push(BenchResult::error(current_run, name, ty, err.to_string())),
+        };
 
         current_run += 1;
         sleep(delay).await;
     }
 
     spinner.stop_and_persist(">", "Done!");
+
+    // Save the result
+    let json = serde_json::to_string(&BenchSummary {
+        server: config.server.to_string(),
+        delay: config.bench.delay,
+        runs: config.bench.runs,
+        results,
+    })?;
+
+    fs::write(output_file.clone(), json)?;
+
+    println!(
+        "Output saved as JSON in '{}'",
+        output_file.to_str().unwrap()
+    );
     Ok(())
 }

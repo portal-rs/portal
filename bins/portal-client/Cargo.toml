@@ -8,6 +8,7 @@ name = "gun"
 path = "src/main.rs"
 
 [dependencies]
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 portal = { path = "../../" }
 tokio = { workspace = true }
