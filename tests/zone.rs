@@ -2,7 +2,7 @@ use portal::{resolver::Hint, types::dns::Name, zone::Zone};
 
 #[test]
 fn test_parse_zone_file() {
-    match Zone::from_file("./tests/test.hints".into()) {
+    match Zone::from_file("./tests/files/test.hints".into()) {
         Ok(zone) => {
             // println!("{:#?}", zone);
 
