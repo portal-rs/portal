@@ -8,7 +8,12 @@ name = "gun"
 path = "src/main.rs"
 
 [dependencies]
-tokio = { workspace = true }
+thiserror = { workspace = true }
 portal = { path = "../../" }
+tokio = { workspace = true }
+serde = { workspace = true }
 clap = { workspace = true }
+toml = { workspace = true }
+rand = { workspace = true }
+spinoff = "0.7.0"
 anyhow = "1.0.68"

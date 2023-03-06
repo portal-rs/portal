@@ -1,11 +1,14 @@
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
+    time::Duration,
 };
 
 use anyhow::Result;
 use clap::Parser;
-use tokio;
+use rand::Rng;
+use spinoff::{spinners, Color, Spinner};
+use tokio::{self, time::sleep};
 
 use portal::{
     client::Client,
@@ -16,6 +19,10 @@ use portal::{
         rr::{Class, Type},
     },
 };
+
+use crate::bench::BenchConfig;
+
+mod bench;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -38,11 +45,24 @@ struct Cli {
     /// Use a different port than 53
     #[arg(short, long, default_value_t = 53)]
     port: u16,
+
+    /// Benchmark file
+    #[arg(long)]
+    bench_file: Option<PathBuf>,
+
+    /// Benchmark results output file
+    #[arg(long, default_value = "./out.json")]
+    bench_output: PathBuf,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // If the user provided a bench file, do a benchmark
+    if cli.bench_file.is_some() {
+        return do_bench(cli.bench_file.unwrap(), cli.bench_output).await;
+    }
 
     let target = match cli.server {
         Some(target) => target,
@@ -90,5 +110,53 @@ async fn main() -> Result<()> {
         socket_addr,
         msg.size(),
     );
+    Ok(())
+}
+
+async fn do_bench(bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
+    // Read the benchmark config and create Rng
+    let config = BenchConfig::from_file(bench_file)?;
+    let mut rng = rand::thread_rng();
+
+    // Precalculate domain name and type for each run
+    let mut types = Vec::new();
+    let mut runs = Vec::new();
+
+    for _ in 0..config.bench.runs {
+        runs.push(rng.gen_range(0..config.data.domains.len()));
+        types.push(rng.gen_range(0..config.data.types.len()));
+    }
+
+    // Create delay duration and keep track of current run
+    let delay = Duration::from_millis(config.bench.delay as u64);
+    let mut current_run = 1;
+
+    // Create DNS client
+    let client = Client::new().await?;
+
+    // Create loading spinner
+    println!(
+        "Running {} tests with a delay of {} ms",
+        config.bench.runs, config.bench.delay
+    );
+    let mut spinner = Spinner::new(spinners::Dots, "Running benchmark...", Color::White);
+
+    // TODO (Techassi): Make this whole benchmark run in a tokio task
+    // Iterate over all the runs
+    for (name_index, type_index) in runs.iter().zip(types) {
+        spinner.update_text(format!("Run {}/{}", current_run, config.bench.runs));
+
+        let name = &config.data.domains[*name_index];
+        let ty = &config.data.types[type_index];
+
+        let (msg, dur) = client
+            .query_duration((name, ty, &Class::IN), config.server)
+            .await?;
+
+        current_run += 1;
+        sleep(delay).await;
+    }
+
+    spinner.stop_and_persist(">", "Done!");
     Ok(())
 }

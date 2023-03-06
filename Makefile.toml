@@ -1,0 +1,24 @@
+[config]
+default_to_workspace = false
+
+[tasks.build-portald]
+command = "cargo"
+args = ["build" , "-p", "portal-server"]
+
+[tasks.run-portald]
+dependencies = ["build-portald"]
+command = "sudo"
+args = ["./target/debug/portald", "--config", "config.local.toml"]
+
+[tasks.build-gun]
+command = "cargo"
+args = ["build" , "-p", "portal-client"]
+
+[tasks.build-gun-release]
+command = "cargo"
+args = ["build" , "-p", "portal-client", "--release"]
+
+[tasks.install-gun]
+command = "cargo"
+args = ["install", "--path", "bins/portal-client"]
+

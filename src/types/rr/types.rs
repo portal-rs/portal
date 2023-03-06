@@ -1,8 +1,17 @@
-use std::{fmt::Display, str::FromStr};
+use std::{error::Error, fmt::Display, str::FromStr};
 
 use binbuf::prelude::*;
 
-use crate::errors::ProtocolError;
+#[derive(Debug)]
+pub struct TypeParseError(String);
+
+impl Error for TypeParseError {}
+
+impl Display for TypeParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// [`Type`] describes resource record types.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
@@ -110,7 +119,7 @@ impl Display for Type {
 }
 
 impl FromStr for Type {
-    type Err = ProtocolError;
+    type Err = TypeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
@@ -130,17 +139,25 @@ impl FromStr for Type {
             "MAILB" => Ok(Self::MAILB),
             "MAILA" => Ok(Self::MAILA),
             "ANY" => Ok(Self::ANY),
-            _ => Err(ProtocolError::TypeParseError),
+            _ => Err(TypeParseError(format!("Invalid type: {s}"))),
         }
     }
 }
 
 impl TryFrom<&str> for Type {
     // TODO (Techassi): Change this to TypeParseError
-    type Error = ProtocolError;
+    type Error = TypeParseError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Self::from_str(value)
+    }
+}
+
+impl TryFrom<String> for Type {
+    type Error = TypeParseError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_str(value.as_str())
     }
 }
 
