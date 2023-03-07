@@ -2,9 +2,12 @@ use binbuf::prelude::*;
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::types::{
-    dns::{Name, NameError},
-    rr::{Class, Type},
+use crate::{
+    constants::dns::RECORD_FIXED_LENGTH,
+    types::{
+        dns::{Name, NameError},
+        rr::{Class, Type},
+    },
 };
 
 #[derive(Debug, Error)]
@@ -73,6 +76,10 @@ impl Writeable for RHeader {
 impl RHeader {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn size(&self) -> usize {
+        RECORD_FIXED_LENGTH + self.name.size()
     }
 
     pub fn name(&self) -> &Name {
