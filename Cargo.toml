@@ -10,6 +10,10 @@ name = "portal"
 version = "0.0.1"
 edition = "2021"
 
+[profile.release]
+debug = false
+strip = true
+
 [dependencies]
 binbuf = { git = "https://github.com/Techassi/binbuf", features = ["derive", "macros"] }
 thiserror = { workspace = true }
