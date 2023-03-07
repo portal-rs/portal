@@ -13,7 +13,7 @@ use tokio::{self, time::sleep};
 
 use portal::{
     client::Client,
-    constants::misc::DEFAULT_RESOLV_CONFIG_PATH,
+    constants::{misc::DEFAULT_RESOLV_CONFIG_PATH, udp::MIN_MESSAGE_SIZE},
     resolv::{ResolvConfig, ResolvOption},
     types::{
         dns::Name,
@@ -35,13 +35,13 @@ struct Cli {
     /// Domain name to look up records for
     name: Option<Name>,
 
-    /// Target DNS server IP address
-    #[arg(short, long)]
-    server: Option<IpAddr>,
-
     /// Record type, e.g. A, AAAA or TXT
     #[arg(name = "TYPE")]
     ty: Option<Type>,
+
+    /// Target DNS server IP address
+    #[arg(short, long)]
+    server: Option<IpAddr>,
 
     /// Use a different port than 53
     #[arg(short, long, default_value_t = 53)]
@@ -54,15 +54,25 @@ struct Cli {
     /// Benchmark results output file
     #[arg(long, default_value = "./bench.json")]
     bench_output: PathBuf,
+
+    /// The receive buffer size
+    #[arg(short, long, default_value_t = MIN_MESSAGE_SIZE)]
+    buffer_size: usize,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    // Build the client based on the provided params
+    let client = Client::builder()
+        .with_buffer_size(cli.buffer_size)
+        .build()
+        .await?;
+
     // If the user provided a bench file, do a benchmark
     if cli.bench_file.is_some() {
-        return do_bench(cli.bench_file.unwrap(), cli.bench_output).await;
+        return do_bench(client, cli.bench_file.unwrap(), cli.bench_output).await;
     }
 
     let target = match cli.server {
@@ -96,7 +106,6 @@ async fn main() -> Result<()> {
     };
 
     let socket_addr = SocketAddr::new(target, cli.port);
-    let client = Client::new().await?;
 
     let (msg, len, dur) = client
         .query_duration((name, ty, Class::IN), socket_addr)
@@ -115,7 +124,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn do_bench(bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
+async fn do_bench(client: Client, bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
     // Read the benchmark config and create Rng
     let config = BenchConfig::from_file(bench_file)?;
     let mut rng = rand::thread_rng();
@@ -132,9 +141,6 @@ async fn do_bench(bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
     // Create delay duration and keep track of current run
     let delay = Duration::from_millis(config.bench.delay as u64);
     let mut current_run = 1;
-
-    // Create DNS client
-    let client = Client::new().await?;
 
     // Create loading spinner
     println!(

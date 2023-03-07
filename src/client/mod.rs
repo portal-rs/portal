@@ -5,7 +5,7 @@ use rand;
 use tokio::{net::UdpSocket, time::Instant};
 
 use crate::{
-    constants,
+    constants::udp::MIN_MESSAGE_SIZE,
     types::{
         dns::{Header, Message, Query, Question, ToQuery},
         udp::Session,
@@ -20,6 +20,7 @@ pub use error::*;
 pub type ClientResult<T> = Result<T, ClientError>;
 
 pub struct Client {
+    buffer_size: usize,
     write_timeout: u64,
     read_timeout: u64,
 
@@ -78,6 +79,7 @@ impl Client {
         // NOTE (Techassi): Can we avoid cloning here?
         let write_timeout = self.write_timeout.clone();
         let read_timeout = self.read_timeout.clone();
+        let buffer_size = self.buffer_size.clone();
 
         let session = Session {
             socket: self.socket.clone(),
@@ -86,7 +88,15 @@ impl Client {
 
         // TODO (Techassi): Pass the timeouts defined in the client
         let result = tokio::spawn(async move {
-            do_query(query, session, active_ids, write_timeout, read_timeout).await
+            do_query(
+                query,
+                session,
+                active_ids,
+                write_timeout,
+                read_timeout,
+                buffer_size,
+            )
+            .await
         });
 
         // TODO (Techassi): Remove transaction ID from active_ids when done
@@ -131,6 +141,7 @@ async fn do_query(
     active_ids: Arc<HashSet<u16>>,
     write_timeout: u64,
     read_timeout: u64,
+    buffer_size: usize,
 ) -> ClientResult<(Message, usize)> {
     let id = get_free_transaction_id(active_ids);
 
@@ -156,18 +167,21 @@ async fn do_query(
     }
 
     // Wait for the DNS response
-    match timeout(read_timeout, wait_for_query_response(session)).await {
+    match timeout(read_timeout, wait_for_query_response(session, buffer_size)).await {
         TimeoutResult::Timeout => Err(ClientError::ReadTimeout(read_timeout)),
         TimeoutResult::Error(err) => Err(err),
         TimeoutResult::Ok(msg) => Ok(msg),
     }
 }
 
-async fn wait_for_query_response(session: Session) -> ClientResult<(Message, usize)> {
+async fn wait_for_query_response(
+    session: Session,
+    buffer_size: usize,
+) -> ClientResult<(Message, usize)> {
     loop {
         session.socket.readable().await?;
 
-        let mut buf = [0u8; constants::udp::MIN_MESSAGE_SIZE];
+        let mut buf = vec![0u8; buffer_size];
         let (len, addr) = match session.socket.recv_from(&mut buf).await {
             Ok(result) => result,
             Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
@@ -213,19 +227,19 @@ fn get_free_transaction_id(active_ids: Arc<HashSet<u16>>) -> u16 {
 }
 
 pub struct ClientBuilder {
-    // network: Network,
+    write_timeout: u64,
+    buffer_size: usize,
     bind_timeout: u64,
     read_timeout: u64,
-    write_timeout: u64,
 }
 
 impl Default for ClientBuilder {
     fn default() -> Self {
         Self {
-            // network: Network::Udp,
+            buffer_size: MIN_MESSAGE_SIZE,
+            write_timeout: 2,
             bind_timeout: 2,
             read_timeout: 2,
-            write_timeout: 2,
         }
     }
 }
@@ -241,20 +255,42 @@ impl ClientBuilder {
         };
 
         Ok(Client {
-            read_timeout: self.read_timeout,
-            write_timeout: self.write_timeout,
-            socket: Arc::new(socket),
             active_ids: Arc::new(HashSet::new()),
+            write_timeout: self.write_timeout,
+            read_timeout: self.read_timeout,
+            buffer_size: self.buffer_size,
+            socket: Arc::new(socket),
         })
     }
 
+    /// Customize the socket bind timeout.
     pub fn with_bind_timeout(&mut self, bind_timeout: u64) -> &Self {
         self.bind_timeout = bind_timeout;
         self
     }
 
+    /// Customize the socket read timeout.
     pub fn with_read_timeout(&mut self, read_timeout: u64) -> &Self {
         self.read_timeout = read_timeout;
+        self
+    }
+
+    /// Customize the socket write timeout.
+    pub fn with_write_timeout(&mut self, write_timeout: u64) -> &Self {
+        self.write_timeout = write_timeout;
+        self
+    }
+
+    /// Customize the buffer size for receiving DNS responses. An minimum size
+    /// if 512 octets is enforced. Providing a buffer size below this size
+    /// will result in a buffer size of 512 octets.
+    pub fn with_buffer_size(&mut self, buffer_size: usize) -> &Self {
+        self.buffer_size = if buffer_size < MIN_MESSAGE_SIZE {
+            MIN_MESSAGE_SIZE
+        } else {
+            buffer_size
+        };
+
         self
     }
 }
