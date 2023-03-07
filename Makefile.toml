@@ -10,15 +10,15 @@ dependencies = ["build-portald"]
 command = "sudo"
 args = ["./target/debug/portald", "--config", "config.local.toml"]
 
-[tasks.build-gun]
+[tasks.build-pgun]
 command = "cargo"
 args = ["build" , "-p", "portal-client"]
 
-[tasks.build-gun-release]
+[tasks.build-pgun-release]
 command = "cargo"
 args = ["build" , "-p", "portal-client", "--release"]
 
-[tasks.install-gun]
+[tasks.install-pgun]
 command = "cargo"
 args = ["install", "--path", "bins/portal-client"]
 
