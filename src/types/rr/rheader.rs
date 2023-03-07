@@ -1,4 +1,5 @@
 use binbuf::prelude::*;
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::types::{
@@ -15,7 +16,7 @@ pub enum RHeaderError {
     BufferError(#[from] BufferError),
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct RHeader {
     name: Name,
     ty: Type,

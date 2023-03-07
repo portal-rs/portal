@@ -1,12 +1,13 @@
 use std::fmt::Display;
 
 use binbuf::prelude::*;
+use serde::Serialize;
 
 use crate::errors::ProtocolError;
 
 /// [`Class`] describes resource record class codes.
 /// See https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub enum Class {
     /// The Internet
     IN,

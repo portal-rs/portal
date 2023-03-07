@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use binbuf::prelude::*;
+use serde::{ser::SerializeStruct, Serialize};
 use thiserror::Error;
 
 use crate::types::dns::Name;
@@ -68,6 +69,18 @@ impl Writeable for Record {
         };
 
         Ok(n)
+    }
+}
+
+impl Serialize for Record {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Record", 2)?;
+        state.serialize_field("header", &self.header)?;
+        state.serialize_field("data", &self.data)?;
+        state.end()
     }
 }
 

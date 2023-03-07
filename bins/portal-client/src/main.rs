@@ -157,7 +157,13 @@ async fn do_bench(bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
             .query_duration((name, ty, &Class::IN), config.server)
             .await
         {
-            Ok((_msg, dur)) => results.push(BenchResult::success(current_run, name, ty, dur)),
+            Ok((msg, dur)) => results.push(BenchResult::success(
+                current_run,
+                name,
+                ty,
+                msg.answers(),
+                dur,
+            )),
             Err(err) => results.push(BenchResult::error(current_run, name, ty, err.to_string())),
         };
 

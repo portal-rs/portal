@@ -47,9 +47,18 @@ impl From<NameError> for BufferError {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Name {
     labels: Vec<Label>,
+}
+
+impl Serialize for Name {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_dotted_string().as_str())
+    }
 }
 
 impl Readable for Name {
@@ -471,7 +480,7 @@ impl<'a> DoubleEndedIterator for NameIterator<'a> {
 
 impl<'a> ExactSizeIterator for NameIterator<'a> {}
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Label(Vec<u8>);
 
 impl TryFrom<&[u8]> for Label {
