@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
     let socket_addr = SocketAddr::new(target, cli.port);
     let client = Client::new().await?;
 
-    let (msg, dur) = client
+    let (msg, len, dur) = client
         .query_duration((name, ty, Class::IN), socket_addr)
         .await?;
 
@@ -106,10 +106,11 @@ async fn main() -> Result<()> {
         "{msg}\n\
         ;; QUERY TIME: {} msec\n\
         ;; SERVER: {}\n\
-        ;; MSG SIZE: {}",
+        ;; MSG SIZE: {}, rcvd: {}",
         dur.as_millis(),
         socket_addr,
         msg.size(),
+        len,
     );
     Ok(())
 }
@@ -157,7 +158,7 @@ async fn do_bench(bench_file: PathBuf, output_file: PathBuf) -> Result<()> {
             .query_duration((name, ty, &Class::IN), config.server)
             .await
         {
-            Ok((msg, dur)) => results.push(BenchResult::success(
+            Ok((msg, _, dur)) => results.push(BenchResult::success(
                 current_run,
                 name,
                 ty,

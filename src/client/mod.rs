@@ -67,7 +67,11 @@ impl Client {
     ///
     /// client.query((Name::try_from("example.com"), Type::A, Class:IN), addr);
     /// ```
-    pub async fn query<Q: ToQuery>(&self, query: Q, addr: SocketAddr) -> ClientResult<Message> {
+    pub async fn query<Q: ToQuery>(
+        &self,
+        query: Q,
+        addr: SocketAddr,
+    ) -> ClientResult<(Message, usize)> {
         let active_ids = self.active_ids.clone();
         let query = query.to_query();
 
@@ -114,10 +118,10 @@ impl Client {
         &self,
         query: Q,
         addr: SocketAddr,
-    ) -> ClientResult<(Message, Duration)> {
+    ) -> ClientResult<(Message, usize, Duration)> {
         let now = Instant::now();
-        let message = self.query(query, addr).await?;
-        Ok((message, now.elapsed()))
+        let (message, len) = self.query(query, addr).await?;
+        Ok((message, len, now.elapsed()))
     }
 }
 
@@ -127,7 +131,7 @@ async fn do_query(
     active_ids: Arc<HashSet<u16>>,
     write_timeout: u64,
     read_timeout: u64,
-) -> ClientResult<Message> {
+) -> ClientResult<(Message, usize)> {
     let id = get_free_transaction_id(active_ids);
 
     let mut message = Message::new_with_header(Header::new(id));
@@ -159,7 +163,7 @@ async fn do_query(
     }
 }
 
-async fn wait_for_query_response(session: Session) -> ClientResult<Message> {
+async fn wait_for_query_response(session: Session) -> ClientResult<(Message, usize)> {
     loop {
         session.socket.readable().await?;
 
@@ -183,10 +187,7 @@ async fn wait_for_query_response(session: Session) -> ClientResult<Message> {
             continue;
         }
 
-        match handle_query_response(&buf[..len]).await {
-            Ok(msg) => return Ok(msg),
-            Err(err) => return Err(err),
-        }
+        return handle_query_response(&buf[..len]).await.map(|r| (r, len));
     }
 }
 

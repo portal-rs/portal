@@ -100,7 +100,7 @@ impl ToResolver for RecursiveResolver {
             // issue, e.g. the target server is not responding. If this
             // happens we just continue the loop and remove the next target
             // candidate in line.
-            let message = match self
+            let (message, _) = match self
                 .client
                 .query(query.clone(), SocketAddr::new(target, 53))
                 .await

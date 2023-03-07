@@ -28,7 +28,7 @@ impl ToResolver for ForwardingResolver {
 
     async fn resolve_raw<Q: ToQuery>(&self, query: Q) -> ResolveResult {
         match self.client.query(query, self.addr).await {
-            Ok(msg) => Ok(msg.into()),
+            Ok((msg, _)) => Ok(msg.into()),
             Err(err) => Err(ResolverError::ClientError(err)),
         }
     }
