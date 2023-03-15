@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use binbuf::prelude::*;
 use serde::Serialize;
@@ -69,11 +69,11 @@ impl Display for Class {
     }
 }
 
-impl TryFrom<&str> for Class {
-    type Error = ProtocolError;
+impl FromStr for Class {
+    type Err = ProtocolError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value.to_uppercase().as_str() {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
             "IN" => Ok(Self::IN),
             "CS" => Ok(Self::CS),
             "CH" => Ok(Self::CH),
@@ -81,6 +81,14 @@ impl TryFrom<&str> for Class {
             "ANY" => Ok(Self::ANY),
             _ => Err(ProtocolError::ClassParseError),
         }
+    }
+}
+
+impl TryFrom<&str> for Class {
+    type Error = ProtocolError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 

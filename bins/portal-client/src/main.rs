@@ -39,6 +39,10 @@ struct Cli {
     #[arg(name = "TYPE")]
     ty: Option<Type>,
 
+    /// Network class, e.g. IN, CH or HS
+    #[arg(default_value_t = Class::IN)]
+    class: Class,
+
     /// Target DNS server IP address
     #[arg(short, long)]
     server: Option<IpAddr>,
@@ -108,7 +112,7 @@ async fn main() -> Result<()> {
     let socket_addr = SocketAddr::new(target, cli.port);
 
     let (msg, len, dur) = client
-        .query_duration((name, ty, Class::IN), socket_addr)
+        .query_duration((name, ty, cli.class), socket_addr)
         .await?;
 
     println!(
