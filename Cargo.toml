@@ -2,7 +2,7 @@
 members = [
   ".",
   "bins/*",
-  "crates/*"
+  # "crates/*"
 ]
 
 [package]

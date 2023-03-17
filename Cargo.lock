@@ -157,10 +157,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "client"
-version = "0.1.0"
-
-[[package]]
 name = "colored"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -445,10 +441,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proto"
-version = "0.1.0"
-
-[[package]]
 name = "quote"
 version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -486,10 +478,6 @@ checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
 ]
-
-[[package]]
-name = "recursor"
-version = "0.1.0"
 
 [[package]]
 name = "rustix"
@@ -541,10 +529,6 @@ dependencies = [
  "ryu",
  "serde",
 ]
-
-[[package]]
-name = "server"
-version = "0.1.0"
 
 [[package]]
 name = "socket2"
