@@ -146,8 +146,6 @@ impl ToResolver for RecursiveResolver {
             if let Some(mut ip_addrs) = self.find_glue_records(&message).await {
                 target_candidates.clear();
                 target_candidates.append(&mut ip_addrs);
-                println!("FOUND GLUE!");
-                println!("NEW TARGETS: {target_candidates:#?}");
                 continue;
             }
 

@@ -81,7 +81,7 @@ async fn handle_response(message: &mut Message, session: Session) {
     message.set_is_response(true);
     message.set_rec_avail(true);
 
-    println!("{message:?}");
+    // println!("{message:?}");
 
     if let Err(err) = message.write::<BigEndian>(&mut buf) {
         // TODO (Techassi): Return message with RCODE 2
