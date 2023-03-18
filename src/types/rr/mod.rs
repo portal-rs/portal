@@ -128,7 +128,7 @@ impl Record {
     }
 
     pub fn size(&self) -> usize {
-        self.header.size() + self.data.size()
+        self.data.size()
     }
 
     pub fn is_edns(&self) -> bool {
