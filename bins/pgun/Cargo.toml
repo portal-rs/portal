@@ -1,11 +1,7 @@
 [package]
-name = "portal-client"
+name = "pgun"
 version = "0.1.0"
 edition = "2021"
-
-[[bin]]
-name = "pgun"
-path = "src/main.rs"
 
 [dependencies]
 serde_json = { workspace = true }
