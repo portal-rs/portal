@@ -123,6 +123,13 @@ impl TryFrom<(&str, &str)> for ResolvOption {
 
         match key {
             "nameserver" => {
+                // TODO (Techassi): We should not throw away the IPv6 zone identifier, but instead use it to bind to the
+                // correct network interface.
+                let value = if value.contains([':', '%']) {
+                    value.split('%').nth(0).unwrap_or(value)
+                } else {
+                    value
+                };
                 let ip_addr = value.parse::<IpAddr>()?;
                 Ok(Self::Nameserver(ip_addr))
             }
