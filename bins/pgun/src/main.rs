@@ -137,9 +137,12 @@ async fn do_bench(client: Client, bench_file: PathBuf, output_file: PathBuf) -> 
     let mut types = Vec::new();
     let mut runs = Vec::new();
 
+    let domain_count = config.data.domains.len();
+    let type_count = config.data.types.len();
+
     for _ in 0..config.bench.runs {
-        runs.push(rng.gen_range(0..config.data.domains.len()));
-        types.push(rng.gen_range(0..config.data.types.len()));
+        runs.push(rng.gen_range(0..domain_count));
+        types.push(rng.gen_range(0..type_count));
     }
 
     // Create delay duration and keep track of current run
