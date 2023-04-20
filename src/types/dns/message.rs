@@ -8,6 +8,7 @@ use crate::{
     resolver::ResultRecords,
     types::{
         dns::{Header, HeaderError, Question, QuestionError},
+        rcode::Rcode,
         rr::{RData, Record, RecordError, SOA},
     },
 };
@@ -311,6 +312,11 @@ impl Message {
         }
 
         false
+    }
+
+    /// Sets the RCODE of the message
+    pub fn set_rcode(&mut self, rcode: Rcode) {
+        self.header.rcode = rcode
     }
 
     /// Read the complete DNS [`Message`] based on the already unpacked [`Header`].
