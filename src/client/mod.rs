@@ -5,16 +5,18 @@ use rand;
 use tokio::{net::UdpSocket, time::Instant};
 
 use crate::{
-    constants::udp::MIN_MESSAGE_SIZE,
     types::{
         dns::{Header, Message, Query, Question, ToQuery},
+        sockets::Sockets,
         udp::Session,
     },
     utils::{timeout, TimeoutResult},
 };
 
+mod builder;
 mod error;
 
+pub use builder::*;
 pub use error::*;
 
 pub type ClientResult<T> = Result<T, ClientError>;
@@ -68,11 +70,11 @@ impl Client {
     ///
     /// client.query((Name::try_from("example.com"), Type::A, Class:IN), addr);
     /// ```
-    pub async fn query<Q: ToQuery>(
-        &self,
-        query: Q,
-        addr: SocketAddr,
-    ) -> ClientResult<(Message, usize)> {
+    pub async fn query<Q, A>(&self, query: Q, addr: A) -> ClientResult<(Message, usize)>
+    where
+        Q: ToQuery,
+        A: Into<Sockets>,
+    {
         let active_ids = self.active_ids.clone();
         let query = query.to_query();
 
@@ -86,7 +88,6 @@ impl Client {
             addr,
         };
 
-        // TODO (Techassi): Pass the timeouts defined in the client
         let result = tokio::spawn(async move {
             do_query(
                 query,
@@ -224,73 +225,4 @@ fn get_free_transaction_id(active_ids: Arc<HashSet<u16>>) -> u16 {
     }
 
     id
-}
-
-pub struct ClientBuilder {
-    write_timeout: u64,
-    buffer_size: usize,
-    bind_timeout: u64,
-    read_timeout: u64,
-}
-
-impl Default for ClientBuilder {
-    fn default() -> Self {
-        Self {
-            buffer_size: MIN_MESSAGE_SIZE,
-            write_timeout: 2,
-            bind_timeout: 2,
-            read_timeout: 2,
-        }
-    }
-}
-
-impl ClientBuilder {
-    pub async fn build(&self) -> Result<Client, ClientError> {
-        let bind_timeout = Duration::from_secs(self.bind_timeout);
-
-        let socket = match timeout(bind_timeout, UdpSocket::bind("0.0.0.0:0")).await {
-            TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(bind_timeout)),
-            TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
-            TimeoutResult::Ok(socket) => socket,
-        };
-
-        Ok(Client {
-            active_ids: Arc::new(HashSet::new()),
-            write_timeout: self.write_timeout,
-            read_timeout: self.read_timeout,
-            buffer_size: self.buffer_size,
-            socket: Arc::new(socket),
-        })
-    }
-
-    /// Customize the socket bind timeout.
-    pub fn with_bind_timeout(&mut self, bind_timeout: u64) -> &Self {
-        self.bind_timeout = bind_timeout;
-        self
-    }
-
-    /// Customize the socket read timeout.
-    pub fn with_read_timeout(&mut self, read_timeout: u64) -> &Self {
-        self.read_timeout = read_timeout;
-        self
-    }
-
-    /// Customize the socket write timeout.
-    pub fn with_write_timeout(&mut self, write_timeout: u64) -> &Self {
-        self.write_timeout = write_timeout;
-        self
-    }
-
-    /// Customize the buffer size for receiving DNS responses. An minimum size
-    /// if 512 octets is enforced. Providing a buffer size below this size
-    /// will result in a buffer size of 512 octets.
-    pub fn with_buffer_size(&mut self, buffer_size: usize) -> &Self {
-        self.buffer_size = if buffer_size < MIN_MESSAGE_SIZE {
-            MIN_MESSAGE_SIZE
-        } else {
-            buffer_size
-        };
-
-        self
-    }
 }

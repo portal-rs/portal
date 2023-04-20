@@ -43,6 +43,14 @@ struct Cli {
     #[arg(default_value_t = Class::IN)]
     class: Class,
 
+    /// Only use IPv4 enabled nameservers
+    #[arg(short = '4', group = "addr_family")]
+    use_ipv4: bool,
+
+    /// Only use IPv6 enabled nameservers
+    #[arg(short = '6', group = "addr_family")]
+    use_ipv6: bool,
+
     /// Target DNS server IP address
     #[arg(short, long)]
     server: Option<IpAddr>,
@@ -71,6 +79,7 @@ async fn main() -> Result<()> {
     // Build the client based on the provided params
     let client = Client::builder()
         .with_buffer_size(cli.buffer_size)
+        .with_ip_version((cli.use_ipv4, cli.use_ipv6))
         .build()
         .await?;
 
