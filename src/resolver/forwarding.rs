@@ -6,7 +6,10 @@ use crate::{
     client::Client,
     errors::ResolverError,
     resolver::{ResolveResult, ToResolver},
-    types::dns::{Message, ToQuery},
+    types::{
+        dns::{Message, ToQuery},
+        sockets::IntoSockets,
+    },
 };
 
 pub struct ForwardingResolver {
@@ -27,8 +30,8 @@ impl ToResolver for ForwardingResolver {
     }
 
     async fn resolve_raw<Q: ToQuery>(&self, query: Q) -> ResolveResult {
-        match self.client.query(query, self.addr).await {
-            Ok((msg, _)) => Ok(msg.into()),
+        match self.client.query(query, self.addr.into_sockets()).await {
+            Ok((msg, _, _)) => Ok(msg.into()),
             Err(err) => Err(ResolverError::ClientError(err)),
         }
     }

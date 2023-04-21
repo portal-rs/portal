@@ -2,66 +2,62 @@ use std::net::{IpAddr, SocketAddr};
 
 pub struct Sockets(Vec<SocketAddr>);
 
-impl From<(Vec<IpAddr>, u16)> for Sockets {
-    fn from(value: (Vec<IpAddr>, u16)) -> Self {
-        let (ips, port) = value;
-        let mut socket_addrs = Vec::new();
+pub trait IntoSockets: Sized {
+    fn into_sockets(self) -> Vec<SocketAddr>;
+    fn into_ipv4_sockets(self) -> Vec<SocketAddr>;
+    fn into_ipv6_sockets(self) -> Vec<SocketAddr>;
+    fn into_filtered_sockets(self, use_ipv4: bool, use_ipv6: bool) -> Vec<SocketAddr> {
+        if !use_ipv4 && !use_ipv6 {
+            return IntoSockets::into_sockets(self);
+        } else if !use_ipv4 && use_ipv6 {
+            return IntoSockets::into_ipv6_sockets(self);
+        } else {
+            return IntoSockets::into_ipv4_sockets(self);
+        }
+    }
+}
+
+impl IntoSockets for (Vec<IpAddr>, u16) {
+    fn into_sockets(self) -> Vec<SocketAddr> {
+        let (ips, port) = self;
+        let mut addrs = Vec::new();
 
         for ip in ips {
-            socket_addrs.push(SocketAddr::new(ip, port));
+            addrs.push(SocketAddr::new(ip, port))
         }
 
-        Self(socket_addrs)
+        addrs
+    }
+
+    fn into_ipv4_sockets(self) -> Vec<SocketAddr> {
+        let ips: Vec<IpAddr> = self.0.iter().copied().filter(|i| i.is_ipv4()).collect();
+        IntoSockets::into_sockets((ips, self.1))
+    }
+
+    fn into_ipv6_sockets(self) -> Vec<SocketAddr> {
+        let ips: Vec<IpAddr> = self.0.iter().copied().filter(|i| i.is_ipv6()).collect();
+        IntoSockets::into_sockets((ips, self.1))
     }
 }
 
-impl From<SocketAddr> for Sockets {
-    fn from(value: SocketAddr) -> Self {
-        Self(vec![value])
-    }
-}
-
-impl Sockets {
-    pub fn iter(&self) -> SocketsIter<'_> {
-        SocketsIter {
-            sockets: &self.0,
-            index: 0,
-        }
+impl IntoSockets for SocketAddr {
+    fn into_sockets(self) -> Vec<SocketAddr> {
+        vec![self]
     }
 
-    pub fn iter_v4(&self) -> Vec<&SocketAddr> {
-        self.iter().filter(|s| s.is_ipv4()).collect()
-    }
-
-    pub fn iter_v6(&self) -> Vec<&SocketAddr> {
-        self.iter().filter(|s| s.is_ipv6()).collect()
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-pub struct SocketsIter<'a> {
-    sockets: &'a Vec<SocketAddr>,
-    index: usize,
-}
-
-impl<'a> Iterator for SocketsIter<'a> {
-    type Item = &'a SocketAddr;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.sockets.len() {
-            return None;
+    fn into_ipv4_sockets(self) -> Vec<SocketAddr> {
+        if self.is_ipv4() {
+            return vec![self];
         }
 
-        let current = self.sockets.get(self.index);
-        self.index += 1;
+        vec![]
+    }
 
-        current
+    fn into_ipv6_sockets(self) -> Vec<SocketAddr> {
+        if self.is_ipv6() {
+            return vec![self];
+        }
+
+        vec![]
     }
 }

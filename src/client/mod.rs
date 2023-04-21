@@ -2,14 +2,10 @@ use std::{collections::HashSet, net::SocketAddr, sync::Arc, time::Duration};
 
 use binbuf::prelude::*;
 use rand;
-use tokio::{net::UdpSocket, time::Instant};
+use tokio::{net::UdpSocket, task::JoinSet, time::Instant};
 
 use crate::{
-    types::{
-        dns::{Header, Message, Query, Question, ToQuery},
-        sockets::Sockets,
-        udp::Session,
-    },
+    types::dns::{Header, Message, Query, Question, ToQuery},
     utils::{timeout, TimeoutResult},
 };
 
@@ -57,6 +53,8 @@ impl Client {
         ClientBuilder::default()
     }
 
+    // TODO (Techassi): Add query_multi and query_multi_duration methods
+
     /// Sends a query to `addr` asking for `name`, `ty` and `class`.
     ///
     /// ### Example
@@ -70,43 +68,55 @@ impl Client {
     ///
     /// client.query((Name::try_from("example.com"), Type::A, Class:IN), addr);
     /// ```
-    pub async fn query<Q, A>(&self, query: Q, addr: A) -> ClientResult<(Message, usize)>
+    pub async fn query<Q>(
+        &self,
+        query: Q,
+        target_addrs: Vec<SocketAddr>,
+    ) -> ClientResult<(Message, usize, SocketAddr)>
     where
         Q: ToQuery,
-        A: Into<Sockets>,
     {
-        let active_ids = self.active_ids.clone();
+        // TODO (Techassi): Most of this stuff will be replaced by the DNS multiplexer
+        let mut set = JoinSet::new();
         let query = query.to_query();
 
-        // NOTE (Techassi): Can we avoid cloning here?
-        let write_timeout = self.write_timeout.clone();
-        let read_timeout = self.read_timeout.clone();
-        let buffer_size = self.buffer_size.clone();
+        for target in target_addrs {
+            let active_ids = self.active_ids.clone();
+            let query = query.clone();
 
-        let session = Session {
-            socket: self.socket.clone(),
-            addr,
-        };
+            // NOTE (Techassi): Can we avoid cloning here?
+            let write_timeout = self.write_timeout.clone();
+            let read_timeout = self.read_timeout.clone();
+            let buffer_size = self.buffer_size.clone();
+            let socket = self.socket.clone();
 
-        let result = tokio::spawn(async move {
-            do_query(
-                query,
-                session,
-                active_ids,
-                write_timeout,
-                read_timeout,
-                buffer_size,
-            )
-            .await
-        });
+            set.spawn(async move {
+                do_query(
+                    query,
+                    socket,
+                    target,
+                    active_ids,
+                    write_timeout,
+                    read_timeout,
+                    buffer_size,
+                )
+                .await
+            });
+        }
 
-        // TODO (Techassi): Remove transaction ID from active_ids when done
-        match result.await {
-            Ok(res) => match res {
-                Ok(msg) => Ok(msg),
-                Err(err) => Err(err),
-            },
-            Err(err) => Err(ClientError::RuntimeError(err)),
+        match set.join_next().await {
+            Some(result) => {
+                drop(set);
+
+                return match result {
+                    Ok(res) => match res {
+                        Ok(msg) => Ok(msg),
+                        Err(err) => Err(err),
+                    },
+                    Err(err) => Err(ClientError::RuntimeError(err)),
+                };
+            }
+            None => todo!(),
         }
     }
 
@@ -125,25 +135,29 @@ impl Client {
     ///
     /// client.query_duration((Name::try_from("example.com"), Type::A, Class:IN), addr);
     /// ```
-    pub async fn query_duration<Q: ToQuery>(
+    pub async fn query_duration<Q>(
         &self,
         query: Q,
-        addr: SocketAddr,
-    ) -> ClientResult<(Message, usize, Duration)> {
+        target_addrs: Vec<SocketAddr>,
+    ) -> ClientResult<(Message, usize, Duration, SocketAddr)>
+    where
+        Q: ToQuery,
+    {
         let now = Instant::now();
-        let (message, len) = self.query(query, addr).await?;
-        Ok((message, len, now.elapsed()))
+        let (message, len, target) = self.query(query, target_addrs).await?;
+        Ok((message, len, now.elapsed(), target))
     }
 }
 
 async fn do_query(
     query: Query,
-    session: Session,
+    socket: Arc<UdpSocket>,
+    target: SocketAddr,
     active_ids: Arc<HashSet<u16>>,
     write_timeout: u64,
     read_timeout: u64,
     buffer_size: usize,
-) -> ClientResult<(Message, usize)> {
+) -> ClientResult<(Message, usize, SocketAddr)> {
     let id = get_free_transaction_id(active_ids);
 
     let mut message = Message::new_with_header(Header::new(id));
@@ -156,19 +170,19 @@ async fn do_query(
     let read_timeout = Duration::from_secs(read_timeout);
 
     // Send DNS query to the remote DNS server
-    match timeout(
-        write_timeout,
-        session.socket.send_to(buf.bytes(), session.addr),
-    )
-    .await
-    {
+    match timeout(write_timeout, socket.send_to(buf.bytes(), target)).await {
         TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(write_timeout)),
         TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
         TimeoutResult::Ok(_) => {}
     }
 
     // Wait for the DNS response
-    match timeout(read_timeout, wait_for_query_response(session, buffer_size)).await {
+    match timeout(
+        read_timeout,
+        wait_for_query_response(socket, target, buffer_size),
+    )
+    .await
+    {
         TimeoutResult::Timeout => Err(ClientError::ReadTimeout(read_timeout)),
         TimeoutResult::Error(err) => Err(err),
         TimeoutResult::Ok(msg) => Ok(msg),
@@ -176,14 +190,15 @@ async fn do_query(
 }
 
 async fn wait_for_query_response(
-    session: Session,
+    socket: Arc<UdpSocket>,
+    target: SocketAddr,
     buffer_size: usize,
-) -> ClientResult<(Message, usize)> {
+) -> ClientResult<(Message, usize, SocketAddr)> {
     loop {
-        session.socket.readable().await?;
+        socket.readable().await?;
 
         let mut buf = vec![0u8; buffer_size];
-        let (len, addr) = match session.socket.recv_from(&mut buf).await {
+        let (len, addr) = match socket.recv_from(&mut buf).await {
             Ok(result) => result,
             Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                 // Continue when the socket.readable() call produced a
@@ -198,11 +213,17 @@ async fn wait_for_query_response(
         };
 
         // Skip packets which weren't received from the correct remote addr
-        if addr != session.addr {
-            continue;
+
+        // FIXME: This is currently broken, as we query multiple targets at once. It is very likely we receive a valid
+        // answer from a different target then currently assumed in this async task. To handle these situations, we
+        // need to implement a DNS multiplexer. For now we don't ignore the message.
+        if addr != target {
+            // continue;
         }
 
-        return handle_query_response(&buf[..len]).await.map(|r| (r, len));
+        return handle_query_response(&buf[..len])
+            .await
+            .map(|r| (r, len, target));
     }
 }
 
