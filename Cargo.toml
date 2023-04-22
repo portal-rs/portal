@@ -1,11 +1,11 @@
 [workspace]
 members = [
-  ".",
   "bins/*",
-  # "crates/*"
+  "crates/*"
 ]
 
-[package]
+[workspace.package]
+authors = ["Techassi <gitætechassi.dev>"]
 name = "portal"
 version = "0.0.1"
 edition = "2021"
@@ -14,21 +14,15 @@ edition = "2021"
 debug = false
 strip = true
 
-[dependencies]
-binbuf = { git = "https://github.com/Techassi/binbuf", features = ["derive", "macros"] }
-thiserror = { workspace = true }
-serde = { workspace = true }
-tokio = { workspace = true }
-toml = { workspace = true }
-rand = { workspace = true }
-enum_dispatch = "0.3.8"
-async-trait = "0.1.58"
-
 [workspace.dependencies]
 tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros", "time"] }
+binbuf = { git = "https://github.com/Techassi/binbuf", features = ["derive", "macros"] }
 serde = { version = "1.0.144", features = ["derive"] }
 clap = { version = "4.1.4", features = ["derive"] }
+enum_dispatch = "0.3.8"
+async-trait = "0.1.58"
 serde_json = "1.0.94"
 thiserror = "1.0.38"
+futures = "0.3.28"
 toml = "0.5.9"
 rand = "0.8.5"

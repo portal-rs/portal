@@ -1,25 +1,13 @@
-use std::{
-    fs,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::PathBuf,
-    time::Duration,
-};
+use std::{fs, net::IpAddr, path::PathBuf, time::Duration};
 
 use anyhow::Result;
 use clap::Parser;
+use portal_client::Client;
+use portal_common::{ResolvConfig, ResolvOption, DEFAULT_RESOLV_CONFIG_PATH};
+use portal_proto::{constants::MIN_MESSAGE_SIZE, sockets::IntoSockets, Class, Name, RType};
 use rand::Rng;
 use spinoff::{spinners, Color, Spinner};
 use tokio::{self, time::sleep};
-
-use portal::{
-    client::Client,
-    constants::{misc::DEFAULT_RESOLV_CONFIG_PATH, udp::MIN_MESSAGE_SIZE},
-    resolv::{ResolvConfig, ResolvOption},
-    types::{
-        dns::Name,
-        rr::{Class, Type},
-    },
-};
 
 use crate::bench::{BenchConfig, BenchResult, BenchSummary};
 
@@ -37,7 +25,7 @@ struct Cli {
 
     /// Record type, e.g. A, AAAA or TXT
     #[arg(name = "TYPE")]
-    ty: Option<Type>,
+    ty: Option<RType>,
 
     /// Network class, e.g. IN, CH or HS
     #[arg(default_value_t = Class::IN)]
@@ -88,40 +76,37 @@ async fn main() -> Result<()> {
         return do_bench(client, cli.bench_file.unwrap(), cli.bench_output).await;
     }
 
-    let target = match cli.server {
-        Some(target) => target,
+    let targets = match cli.server {
+        Some(target) => vec![target],
         None => {
+            let mut targets = Vec::new();
             // If no target DNS server IP address is provided, fallback to
             // local resolv.conf file.
             let config = ResolvConfig::from_file(DEFAULT_RESOLV_CONFIG_PATH.into())?;
 
-            // Set the target IP address to 127.0.0.1 in case we don't find
-            // a DNS server IP address in the resolv.conf file.
-            let mut ip_addr = IpAddr::V4(Ipv4Addr::LOCALHOST);
-
             for option in config.options() {
                 match option {
-                    ResolvOption::Nameserver(ip) => ip_addr = *ip,
+                    ResolvOption::Nameserver(ip) => targets.push(*ip),
                     _ => continue,
                 }
             }
 
-            ip_addr
+            targets
         }
     };
 
     let (name, ty) = if cli.name.is_none() && cli.ty.is_none() {
-        (Name::default(), Type::NS)
+        (Name::default(), RType::NS)
     } else if cli.ty.is_none() {
-        (cli.name.unwrap(), Type::A)
+        (cli.name.unwrap(), RType::A)
     } else {
         (cli.name.unwrap(), cli.ty.unwrap())
     };
 
-    let socket_addr = SocketAddr::new(target, cli.port);
+    let target_addrs = (targets, cli.port).into_filtered_sockets(cli.use_ipv4, cli.use_ipv6);
 
-    let (msg, len, dur) = client
-        .query_duration((name, ty, cli.class), socket_addr)
+    let (msg, len, dur, socket_addr) = client
+        .query_duration((name, ty, cli.class), target_addrs)
         .await?;
 
     println!(
@@ -177,10 +162,10 @@ async fn do_bench(client: Client, bench_file: PathBuf, output_file: PathBuf) -> 
         let ty = &config.data.types[type_index];
 
         match client
-            .query_duration((name, ty, &Class::IN), config.server)
+            .query_duration((name, ty, &Class::IN), config.server.into_sockets())
             .await
         {
-            Ok((msg, _, dur)) => results.push(BenchResult::success(
+            Ok((msg, _, dur, _)) => results.push(BenchResult::success(
                 current_run,
                 name,
                 ty,

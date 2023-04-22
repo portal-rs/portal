@@ -1,0 +1,16 @@
+[package]
+name = "portal-client"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+name = "portal_client"
+path = "src/lib.rs"
+
+[dependencies]
+portal-common = { path = "../../crates/common" }
+portal-proto = { path = "../../crates/proto" }
+thiserror = { workspace = true }
+binbuf = { workspace = true }
+tokio = { workspace = true }
+rand = { workspace = true }

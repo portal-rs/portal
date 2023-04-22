@@ -1,0 +1,13 @@
+[package]
+name = "portal-common"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+name = "portal_common"
+path = "src/lib.rs"
+
+[dependencies]
+thiserror = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }

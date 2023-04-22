@@ -16,5 +16,4 @@ Cargo.lock
 # Custom
 *.local.toml
 bench.json
-named.root
 .cargo/

@@ -17,4 +17,5 @@
   "cSpell.dictionaries": [
     "dns"
   ],
+  "rust-analyzer.showUnlinkedFileNotification": false,
 }

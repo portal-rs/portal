@@ -4,10 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use portal::types::{
-    dns::{Name, NameError},
-    rr::{Type, TypeParseError},
-};
+use portal_proto::{Name, NameError, RType, RTypeParseError};
 use serde::Deserialize;
 use thiserror::Error;
 use toml;
@@ -24,7 +21,7 @@ pub enum BenchConfigError {
     NameError(#[from] NameError),
 
     #[error("Type parse error: {0}")]
-    TypeParseError(#[from] TypeParseError),
+    TypeParseError(#[from] RTypeParseError),
 
     #[error("Socket address parse error: {0}")]
     AddrParseError(#[from] AddrParseError),
@@ -65,7 +62,7 @@ pub struct RawDataOptions {
 #[derive(Debug)]
 pub struct DataOptions {
     pub domains: Vec<Name>,
-    pub types: Vec<Type>,
+    pub types: Vec<RType>,
 }
 
 impl TryFrom<RawBenchConfig> for BenchConfig {
@@ -83,8 +80,8 @@ impl TryFrom<RawBenchConfig> for BenchConfig {
             .data
             .types
             .iter()
-            .map(|t| Type::try_from(t.clone()))
-            .collect::<Result<Vec<Type>, _>>()?;
+            .map(|t| RType::try_from(t.clone()))
+            .collect::<Result<Vec<RType>, _>>()?;
 
         let server = value.server.parse::<SocketAddr>()?;
 

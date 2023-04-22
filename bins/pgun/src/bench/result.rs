@@ -1,9 +1,6 @@
 use std::time::Duration;
 
-use portal::types::{
-    dns::Name,
-    rr::{Record, Type},
-};
+use portal_proto::{Name, RType, Record};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -15,14 +12,14 @@ pub struct BenchResult {
     pub name: Name,
 
     #[serde(rename = "type")]
-    pub ty: Type,
+    pub ty: RType,
 }
 
 impl BenchResult {
     pub fn success(
         number: usize,
         name: &Name,
-        ty: &Type,
+        ty: &RType,
         answers: &Vec<Record>,
         dur: Duration,
     ) -> Self {
@@ -36,7 +33,7 @@ impl BenchResult {
         }
     }
 
-    pub fn error(number: usize, name: &Name, ty: &Type, error: String) -> Self {
+    pub fn error(number: usize, name: &Name, ty: &RType, error: String) -> Self {
         Self {
             error: Some(error),
             name: name.clone(),

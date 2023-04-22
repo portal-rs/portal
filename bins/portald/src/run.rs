@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::Args;
-use portal::{config::RawConfig, server::Server};
+use portal_server::{RawConfig, Server};
 
 #[derive(Args)]
 pub struct Arguments {

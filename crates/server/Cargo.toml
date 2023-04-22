@@ -1,18 +1,19 @@
 [package]
-name = "pgun"
-version = "0.1.0"
+name = "portal-server"
+version = "0.0.1"
 edition = "2021"
 
+[lib]
+name = "portal_server"
+path = "src/lib.rs"
+
 [dependencies]
+portal-resolver = { path = "../../crates/resolver" }
 portal-common = { path = "../../crates/common" }
-portal-client = { path = "../../crates/client" }
 portal-proto = { path = "../../crates/proto" }
-serde_json = { workspace = true }
+async-trait = { workspace = true }
 thiserror = { workspace = true }
+binbuf = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
-clap = { workspace = true }
 toml = { workspace = true }
-rand = { workspace = true }
-spinoff = "0.7.0"
-anyhow = "1.0.68"
