@@ -275,6 +275,10 @@ impl Message {
         len
     }
 
+    pub fn transaction_id(&self) -> u16 {
+        self.header.id
+    }
+
     /// Returns if the message contains any SOA RRs in the authoritative
     /// section.
     pub fn is_soa(&self) -> bool {
