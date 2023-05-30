@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+portal-proto = { path = "../../crates/proto", features = ["clap"] }
 portal-common = { path = "../../crates/common" }
 portal-client = { path = "../../crates/client" }
-portal-proto = { path = "../../crates/proto" }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }

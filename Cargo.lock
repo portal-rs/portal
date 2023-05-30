@@ -504,6 +504,7 @@ version = "0.0.1"
 dependencies = [
  "async-trait",
  "binbuf",
+ "clap 4.1.8",
  "futures",
  "serde",
  "thiserror",
