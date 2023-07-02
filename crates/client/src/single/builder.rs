@@ -1,22 +1,16 @@
 use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use portal_common::{timeout, IpVersion, TimeoutResult};
-use portal_proto::constants::MIN_MESSAGE_SIZE;
+use portal_proto::{constants::MIN_MESSAGE_SIZE, transfer::Protocol};
 use tokio::net::UdpSocket;
 
-use crate::{Client, ClientError};
-
-// use crate::{
-//     constants::udp::MIN_MESSAGE_SIZE,
-//     types::ip_version::IpVersion,
-//     utils::{timeout, TimeoutResult},
-//     Client, ClientError,
-// };
+use crate::{error::ClientError, single::Client};
 
 pub struct ClientBuilder {
     ip_version: IpVersion,
     write_timeout: u64,
     buffer_size: usize,
+    protocol: Protocol,
     bind_timeout: u64,
     read_timeout: u64,
 }
@@ -26,6 +20,7 @@ impl Default for ClientBuilder {
         Self {
             ip_version: IpVersion::default(),
             buffer_size: MIN_MESSAGE_SIZE,
+            protocol: Protocol::Udp,
             write_timeout: 2,
             bind_timeout: 2,
             read_timeout: 2,
@@ -41,10 +36,13 @@ impl ClientBuilder {
             IpVersion::V4 => "0.0.0.0:0",
         };
 
-        let socket = match timeout(bind_timeout, UdpSocket::bind(bind_address)).await {
-            TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(bind_timeout)),
-            TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
-            TimeoutResult::Ok(socket) => socket,
+        let stream = match self.protocol {
+            Protocol::Udp => match timeout(bind_timeout, UdpSocket::bind(bind_address)).await {
+                TimeoutResult::Timeout => return Err(ClientError::WriteTimeout(bind_timeout)),
+                TimeoutResult::Error(err) => return Err(ClientError::IO(err)),
+                TimeoutResult::Ok(socket) => socket,
+            },
+            Protocol::Tcp => todo!(),
         };
 
         Ok(Client {
@@ -52,7 +50,7 @@ impl ClientBuilder {
             write_timeout: self.write_timeout,
             read_timeout: self.read_timeout,
             buffer_size: self.buffer_size,
-            socket: Arc::new(socket),
+            socket: Arc::new(stream),
         })
     }
 
@@ -95,6 +93,14 @@ impl ClientBuilder {
         T: Into<IpVersion>,
     {
         self.ip_version = ip_version.into();
+        self
+    }
+
+    pub fn with_protocol<T>(&mut self, protocol: T) -> &mut Self
+    where
+        T: Into<Protocol>,
+    {
+        self.protocol = protocol.into();
         self
     }
 }
