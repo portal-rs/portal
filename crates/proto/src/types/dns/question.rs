@@ -77,6 +77,10 @@ impl Writeable for Question {
 }
 
 impl Question {
+    pub fn new(name: Name, ty: RType, class: Class) -> Self {
+        Self { name, ty, class }
+    }
+
     /// Returns the size of this [`Question`] by adding up the length of the
     /// domain name and the fixed length (QTYPE and QCLASS).
     pub fn size(&self) -> usize {

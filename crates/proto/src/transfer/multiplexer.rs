@@ -8,22 +8,18 @@ use std::{
     time::Duration,
 };
 
-use futures::{channel::oneshot::Sender, Sink, Stream, StreamExt};
+use futures::{channel::oneshot, Future, FutureExt, Sink, SinkExt, Stream, StreamExt};
 
 use crate::{Message, MessageError};
 
-pub trait MultiplexMessage {
-    fn transaction_id(&self) -> u16;
-}
-
-pub enum MultiplexerError {
+pub enum MultiplexError {
     StreamClosed,
 }
 
-pub struct Multiplexer<T, M>
+pub struct Multiplexer<T>
 where
-    T: Stream + Sink<T::Item> + Unpin,
-    M: MultiplexMessage,
+    T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+    T::Error: std::fmt::Debug + std::error::Error,
 {
     /// This defines the maximum number of messages received in one batch. When
     /// this number is reached, we break out of the receive loop and continue
@@ -47,7 +43,7 @@ where
 
     // === Management of active requests
     /// This keeps track of inflight requests.
-    inflights: HashMap<u16, Sender<M>>,
+    inflights: HashMap<u16, Option<oneshot::Sender<Result<Message, MessageError>>>>,
 
     /// This is the underlying transport to receive and send messages from and
     /// to. The multiplexer doesn't care what protocol is used here and thus
@@ -56,12 +52,12 @@ where
     transport: T,
 }
 
-impl<T, M> Stream for Multiplexer<T, M>
+impl<T> Stream for Multiplexer<T>
 where
-    T: Stream<Item = Result<M, MessageError>> + Sink<T::Item> + Unpin,
-    M: MultiplexMessage,
+    T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+    T::Error: std::fmt::Debug + std::error::Error,
 {
-    type Item = Result<Message, MessageError>;
+    type Item = Result<(), MultiplexError>;
 
     fn poll_next(
         mut self: Pin<&mut Self>,
@@ -79,8 +75,8 @@ where
                     Some(item) => match item {
                         Ok(message) => {
                             // We received a DNS message (answer from remote
-                            // DNS server). Lookup the corresponf inflight
-                            // request and use the oneshot channel to send back
+                            // DNS server). Lookup the corresponding inflight
+                            // request and use the mpsc channel to send back
                             // the received answer.
 
                             // First we update the message received counter
@@ -94,12 +90,27 @@ where
                             // log this but will silently ignore the message
                             // from the senders POV.
                             match self.inflights.entry(message.transaction_id()) {
-                                Occupied(mut _request) => {
+                                Occupied(mut request) => {
                                     // Send the answer to the inflight response
                                     // handler
-                                    // let r = request.get_mut().send(message);
+                                    match request.get_mut().take() {
+                                        Some(chan) => {
+                                            // if let Err(err) = chan.send(Ok(message)) {
+                                            //     println!(
+                                            //         "Failed to send back received message: {}",
+                                            //         err
+                                            //     )
+                                            // }
+                                            chan.send(Ok(message)).unwrap()
+                                        }
+                                        None => {
+                                            println!("The completing channel was already used")
+                                        }
+                                    }
                                 }
-                                Vacant(_) => todo!(),
+                                Vacant(_) => {
+                                    println!("Invalid request id: {}", message.transaction_id())
+                                }
                             }
                         }
                         Err(_) => {
@@ -115,7 +126,7 @@ where
                         // transport was closed and isn't producing any
                         // more messages. In this case we should also terminate
                         // the multiplexer.
-                        todo!()
+                        return Poll::Ready(None);
                     }
                 },
                 Poll::Pending => {
@@ -133,14 +144,14 @@ where
             cx.waker().wake_by_ref()
         }
 
-        todo!()
+        Poll::Pending
     }
 }
 
-impl<T, M> Multiplexer<T, M>
+impl<T> Multiplexer<T>
 where
-    T: Stream<Item = Result<M, MessageError>> + Sink<T::Item> + Unpin,
-    M: MultiplexMessage,
+    T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+    T::Error: std::fmt::Debug + std::error::Error,
 {
     pub fn new(transport: T) -> Self {
         MultiplexerBuilder::default().build(transport)
@@ -148,6 +159,21 @@ where
 
     pub fn builder() -> MultiplexerBuilder {
         MultiplexerBuilder::default()
+    }
+
+    pub async fn send_message(
+        &mut self,
+        message: Message,
+    ) -> Result<MultiplexResponseStream, MultiplexError> {
+        let (tx, rx) = oneshot::channel();
+        let xid = message.transaction_id();
+
+        match self.transport.send(message).await {
+            Ok(_) => self.inflights.insert(xid, Some(tx)),
+            Err(_) => todo!(),
+        };
+
+        Ok(MultiplexResponseStream::new(rx))
     }
 
     /// Drop all timed out requests
@@ -188,10 +214,10 @@ impl MultiplexerBuilder {
         self
     }
 
-    pub fn build<T, M>(&self, transport: T) -> Multiplexer<T, M>
+    pub fn build<T>(&self, transport: T) -> Multiplexer<T>
     where
-        T: Stream<Item = Result<M, MessageError>> + Sink<T::Item> + Unpin,
-        M: MultiplexMessage,
+        T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+        T::Error: std::fmt::Debug + std::error::Error,
     {
         Multiplexer {
             max_num_recv_messages: self.max_number_recv,
@@ -200,5 +226,77 @@ impl MultiplexerBuilder {
             inflights: HashMap::new(),
             transport,
         }
+    }
+}
+
+pub struct MultiplexResponseStream {
+    rx: oneshot::Receiver<Result<Message, MessageError>>,
+}
+
+impl Future for MultiplexResponseStream {
+    type Output = Result<Message, MessageError>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(res) => match res {
+                Ok(res) => Poll::Ready(res),
+                Err(_) => todo!(),
+            },
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl Stream for MultiplexResponseStream {
+    type Item = Result<Message, MessageError>;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(res) => match res {
+                Ok(res) => Poll::Ready(Some(res)),
+                Err(_) => Poll::Ready(None),
+            },
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl MultiplexResponseStream {
+    pub fn new(rx: oneshot::Receiver<Result<Message, MessageError>>) -> Self {
+        Self { rx }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tokio::net::UdpSocket;
+
+    use crate::{transfer::UdpDnsTransport, Class, Header, Name, Question, RType};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn simple_udp_miltiplexer() {
+        let socket = UdpSocket::bind("0.0.0.0:0").await.unwrap();
+
+        let transport = UdpDnsTransport::new(socket);
+        let mut mp = Multiplexer::new(transport);
+
+        let header = Header::new(123);
+        let mut message = Message::new_with_header(header);
+
+        let question = Question::new(Name::try_from("example.com").unwrap(), RType::A, Class::IN);
+        message.add_question(question);
+
+        match mp.send_message(message).await {
+            Ok(resp) => match resp.await {
+                Ok(msg) => println!("{}", msg),
+                Err(err) => eprintln!("{}", err),
+            },
+            Err(_) => todo!(),
+        };
     }
 }
