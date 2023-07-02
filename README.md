@@ -11,9 +11,19 @@ protocol. The protocol implementation is located in these crates:
 - `crates/resolver`: Forwarding and recursive resolver implementations
 - `crates/server`: A DNS server implementation
 
+---
+
+Additionally, there are various ready-to-use binaries based on the above crates:
+
+- `bins/pgun`: A fast terminal-based DNS query tool
+- `bins/portald`: A DNS server with recursive resolving, caching, and DNS blocking\*
+
+\* Currently, the caching and DNS blocking is not fully implemented yet.
+
 ## TODOs
 
 - Move Config code to portal-bin
 - Make handlers more flexible (Generic)
 - Implement a DNS multiplexer to better handle requests, responses, and transaction ids
 - Split zone file loading into Lexer and Parser
+- Add READMEs to crates and bins
