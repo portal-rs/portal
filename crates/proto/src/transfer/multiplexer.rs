@@ -117,12 +117,13 @@ where
                                 }
                             }
                         }
-                        Err(_) => {
+                        Err(err) => {
                             // We received some invalid blob of bytes which
                             // couldn't be parsed as a DNS message. In this
                             // case we just log the error and then proceed
                             // as if nothing ever happened :)
-                            todo!()
+                            eprintln!("{}", err);
+                            continue;
                         }
                     },
                     None => {
@@ -238,33 +239,26 @@ impl MultiplexerBuilder {
 
 #[derive(Debug)]
 pub struct MultiplexResponseStream {
-    rx: oneshot::Receiver<Result<Message, MessageError>>,
-    last: Instant,
+    rx: oneshot::Receiver<Result<Message, MultiplexResponseError>>,
 }
 
 impl Future for MultiplexResponseStream {
-    type Output = Result<Message, MessageError>;
+    type Output = Result<Message, MultiplexResponseError>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        match self.rx.try_recv().unwrap() {
-            Some(res) => Poll::Ready(res),
-            None => {
-                // NOTE (Techassi): Is there a better way to do this?
-                if self.last.elapsed().as_millis() > 100 {
-                    cx.waker().wake_by_ref();
-                }
-                Poll::Pending
-            }
+        match self.rx.poll_unpin(cx) {
+            Poll::Ready(res) => match res {
+                Ok(res) => Poll::Ready(res),
+                Err(err) => Poll::Ready(Err(err.into())),
+            },
+            Poll::Pending => Poll::Pending,
         }
     }
 }
 
 impl MultiplexResponseStream {
-    pub fn new(rx: oneshot::Receiver<Result<Message, MessageError>>) -> Self {
-        Self {
-            last: Instant::now(),
-            rx,
-        }
+    pub fn new(rx: oneshot::Receiver<Result<Message, MultiplexResponseError>>) -> Self {
+        Self { rx }
     }
 }
 
