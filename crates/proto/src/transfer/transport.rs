@@ -12,13 +12,18 @@ use futures::{Sink, Stream};
 use thiserror::Error;
 use tokio::{io::ReadBuf, net::UdpSocket};
 
-use crate::{Header, Message, MessageError};
+use crate::{transfer::Request, Header, Message, MessageError};
 
 #[derive(Debug, Error)]
-pub enum UdpDnsTransportError {}
+pub enum UdpDnsTransportError {
+    #[error("io error")]
+    IoError(#[from] std::io::Error),
+}
 
 pub struct UdpDnsTransport {
-    send_buffer: WriteBuffer,
+    /// This buffer contains messages to be sent until they are actually sent
+    buffer: Vec<Request>,
+    writer: WriteBuffer,
     socket: UdpSocket,
 }
 
@@ -52,23 +57,61 @@ impl Stream for UdpDnsTransport {
     }
 }
 
-impl<Item: Writeable> Sink<Item> for UdpDnsTransport {
+impl Sink<Request> for UdpDnsTransport {
     type Error = UdpDnsTransportError;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        // TODO (Techassi): This is naive
-        Poll::Ready(Ok(()))
+        if self.buffer.is_empty() {
+            return Poll::Ready(Ok(()));
+        }
+
+        Poll::Pending
     }
 
-    fn start_send(mut self: Pin<&mut Self>, item: Item) -> Result<(), Self::Error> {
-        item.write_be(&mut self.send_buffer).unwrap();
+    fn start_send(mut self: Pin<&mut Self>, item: Request) -> Result<(), Self::Error> {
+        self.buffer.push(item);
+
         Ok(())
     }
 
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        // TODO (Techassi): We need access to the target address in here
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        let mut bytes_sent = 0;
 
-        todo!()
+        while let Some(request) = self.buffer.pop() {
+            request.message.write_be(&mut self.writer).unwrap();
+
+            let bytes = self.writer.owned_bytes();
+            let bytes_to_send = bytes.len();
+            self.writer.clear();
+
+            // while bytes_sent < bytes_to_send {
+            //     match self
+            //         .socket
+            //         .poll_send_to(cx, bytes.as_slice(), request.target_socket_addr)
+            //     {
+            //         Poll::Ready(result) => {
+            //             bytes_sent += result?;
+            //         }
+            //         // FIXME: This might be an endless loop if we never succeed to send the complete message
+            //         Poll::Pending => continue,
+            //     }
+            // }
+
+            // bytes_sent = 0;
+
+            match self
+                .socket
+                .poll_send_to(cx, bytes.as_slice(), request.target_socket_addr)
+            {
+                Poll::Ready(_) => (),
+                Poll::Pending => {
+                    self.buffer.push(request);
+                    return Poll::Pending;
+                }
+            }
+        }
+
+        Poll::Ready(Ok(()))
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -77,12 +120,18 @@ impl<Item: Writeable> Sink<Item> for UdpDnsTransport {
 }
 
 impl UdpDnsTransport {
-    pub fn new(socket: UdpSocket) -> Self {
-        let send_buffer = WriteBuffer::new();
+    /// Creates a new UDP DNS transport. This internally uses an asynchronous
+    /// [`UdpSocket`] to send and retrieve raw UDP datagrams which are
+    /// interpreted as DNS messages. This transport implements [`Sink`], which
+    /// first saves massages to be sent in an internal buffer which can contain
+    /// at max `buffer_size` messages.
+    pub fn new(socket: UdpSocket, buffer_size: usize) -> Self {
+        let writer = WriteBuffer::new();
 
         Self {
+            buffer: Vec::with_capacity(buffer_size),
             socket,
-            send_buffer,
+            writer,
         }
     }
 }

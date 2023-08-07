@@ -3,22 +3,26 @@ use std::{
         hash_map::Entry::{Occupied, Vacant},
         HashMap,
     },
+    net::SocketAddr,
     pin::Pin,
     task::Poll,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
-use futures::{channel::oneshot, Future, FutureExt, Sink, SinkExt, Stream, StreamExt};
+use futures::{channel::oneshot, Future, Sink, SinkExt, Stream, StreamExt};
+use thiserror::Error;
 
-use crate::{Message, MessageError};
+use crate::{transfer::Request, Message, MessageError};
 
+#[derive(Debug, Error)]
 pub enum MultiplexError {
+    #[error("multiplexer stream closed")]
     StreamClosed,
 }
 
 pub struct Multiplexer<T>
 where
-    T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+    T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
     T::Error: std::fmt::Debug + std::error::Error,
 {
     /// This defines the maximum number of messages received in one batch. When
@@ -54,7 +58,7 @@ where
 
 impl<T> Stream for Multiplexer<T>
 where
-    T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+    T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
     T::Error: std::fmt::Debug + std::error::Error,
 {
     type Item = Result<(), MultiplexError>;
@@ -150,7 +154,7 @@ where
 
 impl<T> Multiplexer<T>
 where
-    T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+    T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
     T::Error: std::fmt::Debug + std::error::Error,
 {
     pub fn new(transport: T) -> Self {
@@ -164,11 +168,14 @@ where
     pub async fn send_message(
         &mut self,
         message: Message,
+        target: SocketAddr,
     ) -> Result<MultiplexResponseStream, MultiplexError> {
         let (tx, rx) = oneshot::channel();
         let xid = message.transaction_id();
 
-        match self.transport.send(message).await {
+        let request = Request::new(message, target);
+
+        match self.transport.send(request).await {
             Ok(_) => self.inflights.insert(xid, Some(tx)),
             Err(_) => todo!(),
         };
@@ -216,7 +223,7 @@ impl MultiplexerBuilder {
 
     pub fn build<T>(&self, transport: T) -> Multiplexer<T>
     where
-        T: Stream<Item = Result<Message, MessageError>> + Sink<Message> + Unpin,
+        T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
         T::Error: std::fmt::Debug + std::error::Error,
     {
         Multiplexer {
@@ -229,44 +236,35 @@ impl MultiplexerBuilder {
     }
 }
 
+#[derive(Debug)]
 pub struct MultiplexResponseStream {
     rx: oneshot::Receiver<Result<Message, MessageError>>,
+    last: Instant,
 }
 
 impl Future for MultiplexResponseStream {
     type Output = Result<Message, MessageError>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(res) => match res {
-                Ok(res) => Poll::Ready(res),
-                Err(_) => todo!(),
-            },
-            Poll::Pending => Poll::Pending,
-        }
-    }
-}
-
-impl Stream for MultiplexResponseStream {
-    type Item = Result<Message, MessageError>;
-
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
-        match self.rx.poll_unpin(cx) {
-            Poll::Ready(res) => match res {
-                Ok(res) => Poll::Ready(Some(res)),
-                Err(_) => Poll::Ready(None),
-            },
-            Poll::Pending => Poll::Pending,
+        match self.rx.try_recv().unwrap() {
+            Some(res) => Poll::Ready(res),
+            None => {
+                // NOTE (Techassi): Is there a better way to do this?
+                if self.last.elapsed().as_millis() > 100 {
+                    cx.waker().wake_by_ref();
+                }
+                Poll::Pending
+            }
         }
     }
 }
 
 impl MultiplexResponseStream {
     pub fn new(rx: oneshot::Receiver<Result<Message, MessageError>>) -> Self {
-        Self { rx }
+        Self {
+            last: Instant::now(),
+            rx,
+        }
     }
 }
 
@@ -279,10 +277,10 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn simple_udp_miltiplexer() {
+    async fn simple_udp_multiplexer() {
         let socket = UdpSocket::bind("0.0.0.0:0").await.unwrap();
 
-        let transport = UdpDnsTransport::new(socket);
+        let transport = UdpDnsTransport::new(socket, 100);
         let mut mp = Multiplexer::new(transport);
 
         let header = Header::new(123);
@@ -291,12 +289,21 @@ mod test {
         let question = Question::new(Name::try_from("example.com").unwrap(), RType::A, Class::IN);
         message.add_question(question);
 
-        match mp.send_message(message).await {
-            Ok(resp) => match resp.await {
-                Ok(msg) => println!("{}", msg),
-                Err(err) => eprintln!("{}", err),
+        let resp = mp
+            .send_message(message, "1.1.1.1:53".parse().unwrap())
+            .await
+            .unwrap();
+
+        tokio::select! {
+            _ = mp.next() => {
+                panic!("AHHHHH")
             },
-            Err(_) => todo!(),
-        };
+            r = resp => {
+                match r {
+                    Ok(msg) => println!("{}", msg),
+                    Err(err) => eprintln!("{}", err),
+                }
+            }
+        }
     }
 }

@@ -19,6 +19,7 @@ tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread"
 binbuf = { git = "https://github.com/Techassi/binbuf", features = ["derive", "macros"] }
 serde = { version = "1.0.144", features = ["derive"] }
 clap = { version = "4.1.4", features = ["derive"] }
+console-subscriber = "0.1.10"
 enum_dispatch = "0.3.8"
 async-trait = "0.1.58"
 serde_json = "1.0.94"
@@ -26,3 +27,6 @@ thiserror = "1.0.38"
 futures = "0.3.28"
 toml = "0.5.9"
 rand = "0.8.5"
+
+[patch."https://github.com/Techassi/binbuf"]
+binbuf = { path = "../../Techassi/binbuf" }
