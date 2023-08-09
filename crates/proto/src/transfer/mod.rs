@@ -2,10 +2,14 @@ use std::net::SocketAddr;
 
 use crate::Message;
 
+mod background;
+mod handler;
 mod multiplexer;
 mod protocol;
 mod transport;
 
+pub use background::*;
+pub use handler::*;
 pub use multiplexer::*;
 pub use protocol::*;
 pub use transport::*;

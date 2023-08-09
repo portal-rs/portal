@@ -1,8 +1,5 @@
 [workspace]
-members = [
-  "bins/*",
-  "crates/*"
-]
+members = ["bins/*", "crates/*"]
 
 [workspace.package]
 authors = ["Techassi <gitætechassi.dev>"]
@@ -15,8 +12,18 @@ debug = false
 strip = true
 
 [workspace.dependencies]
-tokio = { version = "1.20.1", features = ["net", "sync", "rt", "rt-multi-thread", "macros", "time"] }
-binbuf = { git = "https://github.com/Techassi/binbuf", features = ["derive", "macros"] }
+tokio = { version = "1.20.1", features = [
+  "net",
+  "sync",
+  "rt",
+  "rt-multi-thread",
+  "macros",
+  "time",
+] }
+binbuf = { git = "https://github.com/Techassi/binbuf", features = [
+  "derive",
+  "macros",
+] }
 serde = { version = "1.0.144", features = ["derive"] }
 clap = { version = "4.1.4", features = ["derive"] }
 console-subscriber = "0.1.10"

@@ -4,7 +4,7 @@ use portal_common::{timeout, IpVersion, TimeoutResult};
 use portal_proto::{constants::MIN_MESSAGE_SIZE, transfer::Protocol};
 use tokio::net::UdpSocket;
 
-use crate::{error::ClientError, single::Client};
+use crate::{error::ClientError, Client};
 
 pub struct ClientBuilder {
     ip_version: IpVersion,

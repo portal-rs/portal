@@ -5,14 +5,49 @@ use std::{
     },
     net::SocketAddr,
     pin::Pin,
-    task::Poll,
-    time::{Duration, Instant},
+    task::{Context, Poll},
+    time::Duration,
 };
 
-use futures::{channel::oneshot, Future, Sink, SinkExt, Stream, StreamExt};
+use futures::{
+    channel::oneshot::{self, Canceled, Sender},
+    Future, FutureExt, SinkExt, Stream, StreamExt,
+};
 use thiserror::Error;
+use tokio::time::Instant;
 
-use crate::{transfer::Request, Message, MessageError};
+use crate::{
+    transfer::{Request, Transport},
+    Message, MessageError,
+};
+
+#[derive(Debug)]
+pub struct InflightRequest {
+    /// This channel will send the received response to the correct request.
+    /// This finihes the request.
+    finisher: Option<Sender<Result<Message, MultiplexResponseError>>>,
+
+    /// Once this timeout finishes and the request did not receive a response,
+    /// this request is marked as stale and will be romved from the multiplexer
+    /// and an error message to the roginal caller is returned via the channel.
+    timeout: Duration,
+
+    /// This keeps track when the request was enqueued.
+    enqueued: Instant,
+}
+
+impl InflightRequest {
+    pub fn new(
+        finisher: Sender<Result<Message, MultiplexResponseError>>,
+        timeout: Duration,
+    ) -> Self {
+        Self {
+            finisher: Some(finisher),
+            enqueued: Instant::now(),
+            timeout,
+        }
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum MultiplexError {
@@ -22,8 +57,7 @@ pub enum MultiplexError {
 
 pub struct Multiplexer<T>
 where
-    T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
-    T::Error: std::fmt::Debug + std::error::Error,
+    T: Transport,
 {
     /// This defines the maximum number of messages received in one batch. When
     /// this number is reached, we break out of the receive loop and continue
@@ -47,7 +81,7 @@ where
 
     // === Management of active requests
     /// This keeps track of inflight requests.
-    inflights: HashMap<u16, Option<oneshot::Sender<Result<Message, MessageError>>>>,
+    inflights: HashMap<u16, InflightRequest>,
 
     /// This is the underlying transport to receive and send messages from and
     /// to. The multiplexer doesn't care what protocol is used here and thus
@@ -58,15 +92,11 @@ where
 
 impl<T> Stream for Multiplexer<T>
 where
-    T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
-    T::Error: std::fmt::Debug + std::error::Error,
+    T: Transport,
 {
     type Item = Result<(), MultiplexError>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         // Keep track of the number of received messages. This helps us to
         // immediatly wake up the multiplexer on the next event loop.
         let mut num_recv_messages = 0;
@@ -97,16 +127,8 @@ where
                                 Occupied(mut request) => {
                                     // Send the answer to the inflight response
                                     // handler
-                                    match request.get_mut().take() {
-                                        Some(chan) => {
-                                            // if let Err(err) = chan.send(Ok(message)) {
-                                            //     println!(
-                                            //         "Failed to send back received message: {}",
-                                            //         err
-                                            //     )
-                                            // }
-                                            chan.send(Ok(message)).unwrap()
-                                        }
+                                    match request.get_mut().finisher.take() {
+                                        Some(chan) => chan.send(Ok(message)).unwrap(),
                                         None => {
                                             println!("The completing channel was already used")
                                         }
@@ -155,8 +177,7 @@ where
 
 impl<T> Multiplexer<T>
 where
-    T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
-    T::Error: std::fmt::Debug + std::error::Error,
+    T: Transport,
 {
     pub fn new(transport: T) -> Self {
         MultiplexerBuilder::default().build(transport)
@@ -177,7 +198,10 @@ where
         let request = Request::new(message, target);
 
         match self.transport.send(request).await {
-            Ok(_) => self.inflights.insert(xid, Some(tx)),
+            Ok(_) => {
+                let request = InflightRequest::new(tx, self.read_timeout.clone());
+                self.inflights.insert(xid, request)
+            }
             Err(_) => todo!(),
         };
 
@@ -224,8 +248,7 @@ impl MultiplexerBuilder {
 
     pub fn build<T>(&self, transport: T) -> Multiplexer<T>
     where
-        T: Stream<Item = Result<Message, MessageError>> + Sink<Request> + Unpin,
-        T::Error: std::fmt::Debug + std::error::Error,
+        T: Transport,
     {
         Multiplexer {
             max_num_recv_messages: self.max_number_recv,
@@ -237,6 +260,15 @@ impl MultiplexerBuilder {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum MultiplexResponseError {
+    #[error("message error in multiplexed response")]
+    MessageError(#[from] MessageError),
+
+    #[error("failed to retrieve multiplexed response, channel closed")]
+    Canceled(#[from] Canceled),
+}
+
 #[derive(Debug)]
 pub struct MultiplexResponseStream {
     rx: oneshot::Receiver<Result<Message, MultiplexResponseError>>,
@@ -245,7 +277,7 @@ pub struct MultiplexResponseStream {
 impl Future for MultiplexResponseStream {
     type Output = Result<Message, MultiplexResponseError>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.rx.poll_unpin(cx) {
             Poll::Ready(res) => match res {
                 Ok(res) => Poll::Ready(res),

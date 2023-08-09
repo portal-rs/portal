@@ -14,6 +14,13 @@ use tokio::{io::ReadBuf, net::UdpSocket};
 
 use crate::{transfer::Request, Header, Message, MessageError};
 
+pub trait Transport:
+    Stream<Item = Result<Message, MessageError>> + Sink<Request, Error = Self::SinkError> + Unpin
+{
+    // Workaround for https://github.com/rust-lang/rust/issues/52662
+    type SinkError: std::fmt::Debug + std::error::Error;
+}
+
 #[derive(Debug, Error)]
 pub enum UdpDnsTransportError {
     #[error("io error")]
@@ -25,6 +32,10 @@ pub struct UdpDnsTransport {
     buffer: Vec<Request>,
     writer: WriteBuffer,
     socket: UdpSocket,
+}
+
+impl Transport for UdpDnsTransport {
+    type SinkError = UdpDnsTransportError;
 }
 
 impl Stream for UdpDnsTransport {
@@ -60,7 +71,7 @@ impl Stream for UdpDnsTransport {
 impl Sink<Request> for UdpDnsTransport {
     type Error = UdpDnsTransportError;
 
-    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         if self.buffer.is_empty() {
             return Poll::Ready(Ok(()));
         }

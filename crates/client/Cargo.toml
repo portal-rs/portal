@@ -11,6 +11,7 @@ path = "src/lib.rs"
 portal-common = { path = "../../crates/common" }
 portal-proto = { path = "../../crates/proto" }
 thiserror = { workspace = true }
+futures = { workspace = true }
 binbuf = { workspace = true }
 tokio = { workspace = true }
 rand = { workspace = true }
