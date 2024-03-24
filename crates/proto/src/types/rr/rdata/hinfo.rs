@@ -1,6 +1,10 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadError, Readable},
+    write::{WriteBuffer, WriteError, Writeable},
+    Endianness,
+};
 
 use crate::constants;
 
@@ -17,9 +21,9 @@ impl Display for HINFO {
 }
 
 impl Readable for HINFO {
-    type Error = BufferError;
+    type Error = ReadError;
 
-    fn read<E: binbuf::Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
+    fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let cpu = buf
             .read_char_string(Some(constants::MAX_CHAR_STRING_LENGTH))?
             .to_vec();
@@ -32,7 +36,7 @@ impl Readable for HINFO {
 }
 
 impl Writeable for HINFO {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         buf.write_char_string(self.cpu.as_slice(), Some(constants::MAX_CHAR_STRING_LENGTH))?;

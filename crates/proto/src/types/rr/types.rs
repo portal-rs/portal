@@ -1,6 +1,10 @@
 use std::{error::Error, fmt::Display, str::FromStr};
 
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadError},
+    write::{WriteBuffer, WriteError},
+    Endianness, Readable, Writeable,
+};
 use serde::Serialize;
 
 #[derive(Debug)]
@@ -78,7 +82,7 @@ impl Default for RType {
 }
 
 impl Readable for RType {
-    type Error = BufferError;
+    type Error = ReadError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let ty = u16::read::<E>(buf)?;
@@ -87,7 +91,7 @@ impl Readable for RType {
 }
 
 impl Writeable for RType {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let ty: u16 = self.into();

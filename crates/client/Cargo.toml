@@ -10,8 +10,8 @@ path = "src/lib.rs"
 [dependencies]
 portal-common = { path = "../../crates/common" }
 portal-proto = { path = "../../crates/proto" }
-thiserror = { workspace = true }
 futures = { workspace = true }
 binbuf = { workspace = true }
+snafu = { workspace = true }
 tokio = { workspace = true }
 rand = { workspace = true }

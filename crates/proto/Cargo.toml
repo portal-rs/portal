@@ -17,4 +17,5 @@ async-trait = { workspace = true }
 thiserror = { workspace = true }
 futures = { workspace = true }
 binbuf = { workspace = true }
+snafu = { workspace = true }
 serde = { workspace = true }

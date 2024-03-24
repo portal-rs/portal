@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
+use binbuf::{
+    bytes_written, Endianness, ReadBuffer, ReadError, Readable, WriteBuffer, WriteError, Writeable,
+};
 
 use crate::types::dns::Name;
 
@@ -16,7 +18,7 @@ pub struct SOA {
 }
 
 impl Readable for SOA {
-    type Error = BufferError;
+    type Error = ReadError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let mname = Name::read::<E>(buf)?;
@@ -40,7 +42,7 @@ impl Readable for SOA {
 }
 
 impl Writeable for SOA {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {

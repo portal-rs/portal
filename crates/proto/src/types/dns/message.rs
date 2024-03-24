@@ -1,7 +1,12 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
-use thiserror::Error;
+use binbuf::{
+    macros::bytes_written,
+    read::ReadBuffer,
+    write::{WriteBuffer, Writeable},
+    Endianness,
+};
+use snafu::{ResultExt, Snafu};
 
 use crate::{
     constants,
@@ -12,19 +17,34 @@ use crate::{
     },
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Snafu)]
 pub enum MessageError {
-    #[error("Header error: {0}")]
-    HeaderError(#[from] HeaderError),
+    #[snafu(display("failed to write header"))]
+    WriteHeader { source: HeaderError },
 
-    #[error("Question error: {0}")]
-    QuestionError(#[from] QuestionError),
+    #[snafu(display("failed to read question"))]
+    ReadQuestion { source: QuestionError },
 
-    #[error("Record error: {0}")]
-    RecordError(#[from] RecordError),
+    #[snafu(display("failed to write question"))]
+    WriteQuestion { source: QuestionError },
 
-    #[error("Buffer error: {0}")]
-    BufferError(#[from] BufferError),
+    #[snafu(display("failed to read answer records"))]
+    ReadAnswers { source: RecordError },
+
+    #[snafu(display("failed to write answer records"))]
+    WriteAnswers { source: RecordError },
+
+    #[snafu(display("failed to read authority records"))]
+    ReadAuthorities { source: RecordError },
+
+    #[snafu(display("failed to write authority records"))]
+    WriteAuthorities { source: RecordError },
+
+    #[snafu(display("failed to read additional records"))]
+    ReadAdditionals { source: RecordError },
+
+    #[snafu(display("failed to write additional records"))]
+    WriteAdditionals { source: RecordError },
 }
 
 /// [`Message`] describes a complete DNS message describes in RFC 1035
@@ -68,12 +88,12 @@ impl Writeable for Message {
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {
-            self.header.write::<E>(buf)?;
+            self.header.write::<E>(buf).context(WriteHeaderSnafu)?;
 
-            self.question.write::<E>(buf)?;
-            self.answers.write::<E>(buf)?;
-            self.authorities.write::<E>(buf)?;
-            self.additionals.write::<E>(buf)?
+            self.question.write::<E>(buf).context(WriteQuestionSnafu)?;
+            self.answers.write::<E>(buf).context(WriteAnswersSnafu)?;
+            self.authorities.write::<E>(buf).context(WriteAuthoritiesSnafu)?;
+            self.additionals.write::<E>(buf).context(WriteAdditionalsSnafu)?
         };
 
         Ok(n)
@@ -327,19 +347,19 @@ impl Message {
         let mut message = Self::new_with_header(header);
 
         // Read questions
-        let questions = read_questions::<E>(buf, message.qdcount())?;
+        let questions = read_questions::<E>(buf, message.qdcount()).context(ReadQuestionSnafu)?;
         message.set_questions(questions);
 
         // Read answer records. This will most likely be empty for requests
-        let answers = read_rrs::<E>(buf, message.ancount())?;
+        let answers = read_rrs::<E>(buf, message.ancount()).context(ReadAnswersSnafu)?;
         message.set_answers(answers);
 
         // Read authority records
-        let authorities = read_rrs::<E>(buf, message.nscount())?;
+        let authorities = read_rrs::<E>(buf, message.nscount()).context(ReadAuthoritiesSnafu)?;
         message.set_authorities(authorities);
 
         // Read additional records
-        let additionals = read_rrs::<E>(buf, message.arcount())?;
+        let additionals = read_rrs::<E>(buf, message.arcount()).context(ReadAdditionalsSnafu)?;
         message.set_additionals(additionals);
 
         Ok(message)

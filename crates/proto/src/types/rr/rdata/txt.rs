@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
+use binbuf::{Endianness, ReadBuffer, ReadResult, WriteBuffer, WriteError, Writeable};
 
 use crate::constants;
 
@@ -23,7 +23,7 @@ impl Display for TXT {
 }
 
 impl Writeable for TXT {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let mut n = 0;
@@ -37,7 +37,7 @@ impl Writeable for TXT {
 }
 
 impl TXT {
-    pub fn read<E: Endianness>(buf: &mut ReadBuffer, rdlen: u16) -> Result<Self, BufferError> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, rdlen: u16) -> ReadResult<Self> {
         let start_len = buf.len();
         let rdlen = rdlen as usize;
         let mut data = Vec::new();

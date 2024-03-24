@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
+use binbuf::{
+    macros::bytes_written, read::ReadBuffer, write::WriteBuffer, Endianness, Readable, Writeable,
+};
 use serde::{ser::SerializeStruct, Serialize};
-use thiserror::Error;
+use snafu::{ResultExt, Snafu};
 
 use crate::types::dns::Name;
 
@@ -16,18 +18,33 @@ pub use rdata::*;
 pub use rheader::*;
 pub use types::*;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Snafu)]
 pub enum RecordError {
-    #[error("RHeader error")]
-    RHeaderError(#[from] RHeaderError),
+    #[snafu(display("failed to read RHEADER"))]
+    ReadHeader { source: RHeaderError },
 
-    #[error("RData error")]
-    RDataError(#[from] RDataError),
+    #[snafu(display("failed to write RHEADER"))]
+    WriteHeader { source: RHeaderError },
 
-    #[error("Buffer error: {0}")]
-    BufferError(#[from] BufferError),
+    #[snafu(display("failed to read RDATA"))]
+    ReadData { source: RDataError },
+
+    #[snafu(display("failed to write RDATA"))]
+    WriteData { source: RDataError },
 }
 
+/// ### Resource Records Definition (RFC 1034)
+///
+/// A domain name identifies a node. Each node has a set of resource
+/// information, which may be empty. The set of resource information
+/// associated with a particular name is composed of separate resource
+/// records (RRs). The order of RRs in a set is not significant, and need
+/// not be preserved by name servers, resolvers, or other parts of the DNS.
+///
+/// ### See
+///
+/// - <https://datatracker.ietf.org/doc/html/rfc1034#section-3.6>
+/// - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.2>
 #[derive(Debug, Clone, Default)]
 pub struct Record {
     header: RHeader,
@@ -52,8 +69,8 @@ impl Readable for Record {
     type Error = RecordError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
-        let header = RHeader::read::<E>(buf)?;
-        let data = RData::read::<E>(buf, &header)?;
+        let header = RHeader::read::<E>(buf).context(ReadHeaderSnafu)?;
+        let data = RData::read::<E>(buf, &header).context(ReadDataSnafu)?;
 
         Ok(Self { header, data })
     }
@@ -64,8 +81,8 @@ impl Writeable for Record {
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {
-            self.header.write::<E>(buf)?;
-            self.data.write::<E>(buf)?
+            self.header.write::<E>(buf).context(WriteHeaderSnafu)?;
+            self.data.write::<E>(buf).context(WriteDataSnafu)?
         };
 
         Ok(n)

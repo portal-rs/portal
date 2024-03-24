@@ -1,6 +1,10 @@
 use std::{fmt::Display, str::FromStr};
 
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadError},
+    write::{WriteBuffer, WriteError},
+    Endianness, Readable, Writeable,
+};
 use serde::Serialize;
 
 use crate::ProtocolError;
@@ -39,7 +43,7 @@ impl Default for Class {
 }
 
 impl Readable for Class {
-    type Error = BufferError;
+    type Error = ReadError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let class = u16::read::<E>(buf)?;
@@ -48,7 +52,7 @@ impl Readable for Class {
 }
 
 impl Writeable for Class {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let class: u16 = self.into();

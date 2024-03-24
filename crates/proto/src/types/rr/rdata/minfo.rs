@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
+use binbuf::{Readable, Writeable};
 
 use crate::types::dns::Name;
 

@@ -1,12 +1,51 @@
-use binbuf::prelude::*;
-use thiserror::Error;
+use binbuf::{
+    macros::bytes_written,
+    read::{ReadBuffer, ReadError, Readable},
+    write::{WriteBuffer, WriteError, Writeable},
+    Endianness,
+};
+use snafu::{ResultExt, Snafu};
+use tracing::instrument;
 
 use crate::types::{opcode::Opcode, rcode::Rcode};
 
-#[derive(Debug, Error)]
+#[derive(Debug, Snafu)]
 pub enum HeaderError {
-    #[error("Buffer error: {0}")]
-    BufferError(#[from] BufferError),
+    #[snafu(display("failed to read transaction ID"))]
+    ReadId { source: ReadError },
+
+    #[snafu(display("failed to write transaction ID"))]
+    WriteId { source: WriteError },
+
+    #[snafu(display("failed to read FLAGS"))]
+    ReadFlags { source: ReadError },
+
+    #[snafu(display("failed to write FLAGS"))]
+    WriteFlags { source: WriteError },
+
+    #[snafu(display("failed to read QDCOUNT"))]
+    ReadQdcount { source: ReadError },
+
+    #[snafu(display("failed to write QDCOUNT"))]
+    WriteQdcount { source: WriteError },
+
+    #[snafu(display("failed to read ANCOUNT"))]
+    ReadAncount { source: ReadError },
+
+    #[snafu(display("failed to write ANCOUNT"))]
+    WriteAncount { source: WriteError },
+
+    #[snafu(display("failed to read NSCOUNT"))]
+    ReadNscount { source: ReadError },
+
+    #[snafu(display("failed to write NSCOUNT"))]
+    WriteNscount { source: WriteError },
+
+    #[snafu(display("failed to read ARCOUNT"))]
+    ReadArcount { source: ReadError },
+
+    #[snafu(display("failed to write ARCOUNT"))]
+    WriteArcount { source: WriteError },
 }
 
 /// [`Header`] describes the header data of a message. This header format enables easy access to all header fields. The
@@ -76,13 +115,14 @@ impl Readable for Header {
     /// fixed in size. The function returns the [`Header`] it self and the
     /// offset (which will always be 12). This function is usually the first
     /// step in unpacking the whole message.
+    #[instrument(name = "read_dns_header", skip(buf))]
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
-        let id = u16::read::<E>(buf)?;
-        let flags = u16::read::<E>(buf)?;
-        let qdcount = u16::read::<E>(buf)?;
-        let ancount = u16::read::<E>(buf)?;
-        let nscount = u16::read::<E>(buf)?;
-        let arcount = u16::read::<E>(buf)?;
+        let id = u16::read::<E>(buf).context(ReadIdSnafu)?;
+        let flags = u16::read::<E>(buf).context(ReadFlagsSnafu)?;
+        let qdcount = u16::read::<E>(buf).context(ReadQdcountSnafu)?;
+        let ancount = u16::read::<E>(buf).context(ReadAncountSnafu)?;
+        let nscount = u16::read::<E>(buf).context(ReadNscountSnafu)?;
+        let arcount = u16::read::<E>(buf).context(ReadArcountSnafu)?;
 
         let header = Header::from(RawHeader {
             id,
@@ -116,10 +156,14 @@ impl Header {
     }
 }
 
-/// [`RawHeader`] describes the raw header data of a message directly from the wire. The data gets unpacked by splitting
-/// the message into six 16 bit (2 octet) chunks. The first chunk is just the **ID**. The second chunk **flags** carries
-/// data like QR, OPCODE, etc. which gets split up further by bit masks. The remaining four chunks contain counts for
-/// questions, answers, ns and additional records.
+/// [`RawHeader`] describes the raw header data of a message directly from
+/// the wire.
+///
+/// The data gets unpacked by splitting the message into six 16 bit (2 octet)
+/// chunks. The first chunk is just the **ID**. The second chunk **flags**
+/// carries data like QR, OPCODE, etc. which gets split up further by bit
+/// masks. The remaining four chunks contain counts for questions, answers,
+/// nameserver and additional records.
 pub struct RawHeader {
     pub id: u16,
     pub flags: u16,
@@ -134,12 +178,12 @@ impl Writeable for RawHeader {
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {
-            self.id.write::<E>(buf)?;
-            self.flags.write::<E>(buf)?;
-            self.qdcount.write::<E>(buf)?;
-            self.ancount.write::<E>(buf)?;
-            self.nscount.write::<E>(buf)?;
-            self.arcount.write::<E>(buf)?
+            self.id.write::<E>(buf).context(WriteIdSnafu)?;
+            self.flags.write::<E>(buf).context(WriteFlagsSnafu)?;
+            self.qdcount.write::<E>(buf).context(WriteQdcountSnafu)?;
+            self.ancount.write::<E>(buf).context(WriteAncountSnafu)?;
+            self.nscount.write::<E>(buf).context(WriteNscountSnafu)?;
+            self.arcount.write::<E>(buf).context(WriteArcountSnafu)?
         };
 
         Ok(n)

@@ -1,4 +1,8 @@
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadError, Readable},
+    write::{WriteBuffer, WriteError, Writeable},
+    Endianness,
+};
 
 /// DNS EDNS0 Option Codes (OPT)
 ///
@@ -70,7 +74,7 @@ pub enum OptionCode {
 }
 
 impl Readable for OptionCode {
-    type Error = BufferError;
+    type Error = ReadError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let code = u16::read::<E>(buf)?;
@@ -79,7 +83,7 @@ impl Readable for OptionCode {
 }
 
 impl Writeable for OptionCode {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let code: u16 = self.into();

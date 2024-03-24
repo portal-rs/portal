@@ -1,4 +1,8 @@
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadError},
+    write::{WriteBuffer, WriteError, Writeable},
+    Endianness,
+};
 
 #[derive(Debug, Clone)]
 pub struct COOKIE {
@@ -7,7 +11,7 @@ pub struct COOKIE {
 }
 
 impl COOKIE {
-    pub fn read<E: Endianness>(buf: &mut ReadBuffer, len: u16) -> Result<Self, BufferError> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, len: u16) -> Result<Self, ReadError> {
         // If the len is only 8 octets, we know that only the client cookie is
         // present, so we take the short path
         if len == 8 {
@@ -31,7 +35,7 @@ impl COOKIE {
 }
 
 impl Writeable for COOKIE {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let mut n = buf.write(&self.client);

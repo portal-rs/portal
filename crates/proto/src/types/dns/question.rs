@@ -1,7 +1,12 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
-use thiserror::Error;
+use binbuf::{
+    macros::bytes_written,
+    read::{ReadBuffer, ReadError, Readable},
+    write::{WriteBuffer, WriteError, Writeable},
+    Endianness,
+};
+use snafu::{ResultExt, Snafu};
 
 use crate::{
     constants,
@@ -11,13 +16,25 @@ use crate::{
     },
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Snafu)]
 pub enum QuestionError {
-    #[error("Name error: {0}")]
-    NameError(#[from] NameError),
+    #[snafu(display("failed to read QNAME"))]
+    ReadName { source: NameError },
 
-    #[error("Buffer error: {0}")]
-    BufferError(#[from] BufferError),
+    #[snafu(display("failed to write QNAME"))]
+    WriteName { source: NameError },
+
+    #[snafu(display("failed to read QTYPE"))]
+    ReadType { source: ReadError },
+
+    #[snafu(display("failed to write QTYPE"))]
+    WriteType { source: WriteError },
+
+    #[snafu(display("failed to read QCLASS"))]
+    ReadClass { source: ReadError },
+
+    #[snafu(display("failed to write QCLASS"))]
+    WriteClass { source: WriteError },
 }
 
 /// [`Question`] describes a DNS question. The RFC allows multiple questions
@@ -54,9 +71,9 @@ impl Readable for Question {
     type Error = QuestionError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
-        let name = Name::read::<E>(buf)?;
-        let ty = RType::read::<E>(buf)?;
-        let class = Class::read::<E>(buf)?;
+        let name = Name::read::<E>(buf).context(ReadNameSnafu)?;
+        let ty = RType::read::<E>(buf).context(ReadTypeSnafu)?;
+        let class = Class::read::<E>(buf).context(ReadClassSnafu)?;
 
         Ok(Question { name, ty, class })
     }
@@ -67,9 +84,9 @@ impl Writeable for Question {
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {
-            self.name.write::<E>(buf)?;
-            self.ty.write::<E>(buf)?;
-            self.class.write::<E>(buf)?
+            self.name.write::<E>(buf).context(WriteNameSnafu)?;
+            self.ty.write::<E>(buf).context(WriteTypeSnafu)?;
+            self.class.write::<E>(buf).context(WriteClassSnafu)?
         };
 
         Ok(n)

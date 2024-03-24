@@ -12,8 +12,8 @@ portal-resolver = { path = "../../crates/resolver" }
 portal-common = { path = "../../crates/common" }
 portal-proto = { path = "../../crates/proto" }
 async-trait = { workspace = true }
-thiserror = { workspace = true }
 binbuf = { workspace = true }
+snafu = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 toml = { workspace = true }

@@ -3,9 +3,13 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr},
 };
 
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadError},
+    write::{WriteBuffer, Writeable},
+    Endianness,
+};
 use serde::Serialize;
-use thiserror::Error;
+use snafu::Snafu;
 
 use crate::types::{
     dns::{Name, NameError},
@@ -49,16 +53,16 @@ impl RDataParseError {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Snafu)]
 pub enum RDataError {
-    #[error("Name error: {0}")]
-    NameError(#[from] NameError),
+    #[snafu(display("Name error"))]
+    NameError { source: NameError },
 
-    #[error("Invalid RDATA len - expected {expected}, got {got}")]
+    #[snafu(display("Invalid RDATA len - expected {expected}, got {got}"))]
     InvalidRDataLen { expected: u16, got: u16 },
 
-    #[error("Buffer error: {0}")]
-    BufferError(#[from] BufferError),
+    #[snafu(display("Buffer error"))]
+    BufferError { source: ReadError },
 }
 
 #[derive(Debug, Clone)]

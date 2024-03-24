@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use binbuf::prelude::*;
+use binbuf::{read::ReadBuffer, Endianness, ReadResult, WriteBuffer, WriteError, Writeable};
 
 use crate::types::{
     edns::{EdnsHeader, Option, OptionCode},
@@ -20,10 +20,7 @@ impl Display for OPT {
 }
 
 impl OPT {
-    pub fn read<E: Endianness>(
-        buf: &mut ReadBuffer,
-        rheader: &RHeader,
-    ) -> Result<Self, BufferError> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, rheader: &RHeader) -> ReadResult<Self> {
         // First we create the EDNS header
         let header = EdnsHeader::from(rheader);
 
@@ -43,7 +40,7 @@ impl OPT {
 }
 
 impl Writeable for OPT {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let mut n = 0;

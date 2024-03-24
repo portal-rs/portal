@@ -1,9 +1,12 @@
-use binbuf::prelude::*;
-
 use crate::types::edns::OptionCode;
 
 mod cookie;
 
+use binbuf::{
+    read::{ReadBuffer, ReadError},
+    write::{WriteBuffer, WriteError, Writeable},
+    Endianness,
+};
 use cookie::*;
 
 #[derive(Debug, Clone)]
@@ -16,7 +19,7 @@ impl OptionData {
         buf: &mut ReadBuffer,
         opt_code: OptionCode,
         len: u16,
-    ) -> Result<Self, BufferError> {
+    ) -> Result<Self, ReadError> {
         match opt_code {
             OptionCode::RESERVED(_) => todo!(),
             OptionCode::RESERVEDLOCAL(_) => todo!(),
@@ -44,7 +47,7 @@ impl OptionData {
 }
 
 impl Writeable for OptionData {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         match self {

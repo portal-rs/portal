@@ -13,4 +13,4 @@ portal-common = { path = "../common" }
 portal-proto = { path = "../proto" }
 enum_dispatch = { workspace = true }
 async-trait = { workspace = true }
-thiserror = { workspace = true }
+snafu = { workspace = true }

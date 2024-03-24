@@ -1,6 +1,10 @@
 use std::fmt::Display;
 
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadResult},
+    write::{WriteBuffer, WriteError},
+    Endianness, Writeable,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct NULL {
@@ -14,7 +18,7 @@ impl Display for NULL {
 }
 
 impl Writeable for NULL {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         Ok(buf.write(&mut self.data.clone()))
@@ -26,7 +30,7 @@ impl NULL {
         Self::default()
     }
 
-    pub fn read<E: Endianness>(buf: &mut ReadBuffer, rdlen: u16) -> Result<Self, BufferError> {
+    pub fn read<E: Endianness>(buf: &mut ReadBuffer, rdlen: u16) -> ReadResult<Self> {
         if rdlen > 0 {
             let data = buf.read_vec(rdlen as usize)?;
             return Ok(Self { data });

@@ -1,50 +1,55 @@
 use std::{fmt::Display, str::FromStr};
 
-use binbuf::prelude::*;
+use binbuf::{
+    read::{ReadBuffer, ReadError, Readable},
+    write::{WriteBuffer, Writeable},
+    Endianness,
+};
 use serde::Serialize;
-use thiserror::Error;
+use snafu::{ensure, ResultExt, Snafu};
 
 use crate::constants::{COMP_PTR, COMP_PTR_MASK, MAX_DOMAIN_LENGTH, MAX_LABEL_LENGTH};
 
+mod label;
+pub use label::*;
+
+#[derive(Debug, Default)]
 enum NameParseState {
+    #[default]
     LabelLenOrPointer,
     Pointer,
     Label,
     Root,
 }
 
-impl Default for NameParseState {
-    fn default() -> Self {
-        Self::LabelLenOrPointer
-    }
-}
-
-#[derive(Debug, Error)]
+#[derive(Debug, Snafu)]
 pub enum NameError {
-    #[error("Invalid domain name label length or compression pointer ({0})")]
-    InvalidLabelLenOrPointer(u8),
+    #[snafu(display("invalid domain name label length or compression pointer ({ptr})"))]
+    InvalidLabelLenOrPointer { ptr: u8 },
 
-    #[error("Invalid compression pointer location")]
+    #[snafu(display("failed to read label"))]
+    ReadLabel { source: LabelError },
+
+    #[snafu(display("failed to write label, expected < {} max bytes", MAX_LABEL_LENGTH))]
+    WriteLabelTooLong,
+
+    #[snafu(display("failed to read terminating null byte"))]
+    ReadTerminatingNullByte { source: ReadError },
+
+    #[snafu(display("invalid compression pointer location"))]
     InvalidPointerLocation,
 
-    #[error("Invalid byte in domain name label")]
-    InvalidDomainNameLabelByte,
+    #[snafu(display("failed to read compression pointer"))]
+    ReadPointer { source: ReadError },
 
-    #[error("Domain name label too long (< {})", MAX_LABEL_LENGTH)]
-    DomainNameLabelTooLong,
-
-    #[error("Domain name to long (< {})", MAX_DOMAIN_LENGTH)]
+    #[snafu(display("domain name to long (< {})", MAX_DOMAIN_LENGTH))]
     DomainNameTooLong,
-
-    #[error("Buffer error: {0}")]
-    BufferError(#[from] BufferError),
 }
 
-// TODO (Techassi): Remove this
-impl From<NameError> for BufferError {
-    fn from(error: NameError) -> Self {
-        Self::Other(error.to_string())
-    }
+#[derive(Debug, Snafu)]
+pub enum NameParseError {
+    #[snafu(display("input contains non-ASCII characters"))]
+    NonAscii,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -78,7 +83,9 @@ impl Readable for Name {
         //     return Ok(name);
         // }
         if buf.peek().filter(|b| *b == 0).is_some() {
-            buf.pop()?;
+            // We just made sure there is at least once byte left in the
+            // buffer. So it is save to unwrap here.
+            buf.pop().unwrap();
             return Ok(name);
         }
 
@@ -97,40 +104,34 @@ impl Readable for Name {
                     Some(b) if b & COMP_PTR == 0x0 => NameParseState::Label,
 
                     // A byte which shouldn't be here
-                    Some(b) => return Err(NameError::InvalidLabelLenOrPointer(b)),
+                    Some(b) => return InvalidLabelLenOrPointerSnafu { ptr: b }.fail(),
                 },
                 NameParseState::Pointer => {
                     // Read a u16 which starts with 11 (0xC0) and apply the bit
                     // mask to extract the actual compression pointer location
-                    let pointer_location = match u16::read::<E>(buf) {
-                        Ok(b) => (b & COMP_PTR_MASK) as usize,
-                        Err(err) => return Err(err.into()),
-                    };
+                    let raw_pointer = u16::read::<E>(buf).context(ReadPointerSnafu)?;
+                    let pointer = (raw_pointer & COMP_PTR_MASK) as usize;
 
                     // Ensure we jump to a location which comes before the
                     // current offset
-                    if pointer_location > buf.offset() {
-                        return Err(NameError::InvalidPointerLocation);
-                    }
+                    ensure!(pointer <= buf.offset(), InvalidPointerLocationSnafu);
 
                     // Jump to the pointer location by updating the underlying
-                    // buffer
-                    buf.jump_to(pointer_location)?;
+                    // buffer. Above we made sure the location is valid and thus
+                    // it is save to unwrap.
+                    buf.jump_to(pointer).unwrap();
                     NameParseState::LabelLenOrPointer
                 }
                 NameParseState::Label => {
                     // Read the label based on the label length byte. This
                     // returns an error if the label length exceeds the maximum
                     // domain name label length of 63
-                    let bytes = match buf.read_char_string(Some(MAX_LABEL_LENGTH)) {
-                        Ok(bytes) => bytes,
-                        Err(_) => return Err(NameError::DomainNameLabelTooLong),
-                    };
+                    let label = Label::read::<E>(buf).context(ReadLabelSnafu)?;
 
                     // Add the label to the domain name. This returns an error
                     // if the domain name length exceeds the maximum domain
                     // name length of 255
-                    name.add_label(bytes.try_into()?)?;
+                    name.add_label(label)?;
 
                     NameParseState::LabelLenOrPointer
                 }
@@ -144,7 +145,7 @@ impl Readable for Name {
 
                     // We reached the terminating null byte. Remove it from
                     // the buffer and break out of the loop
-                    buf.pop()?;
+                    buf.pop().context(ReadTerminatingNullByteSnafu)?;
                     break;
                 }
             }
@@ -163,11 +164,10 @@ impl Writeable for Name {
 
         // TODO (Techassi): This does NOT handle compression. Add it
         for label in self.iter() {
-            if label.len() > MAX_LABEL_LENGTH.into() {
-                return Err(NameError::DomainNameLabelTooLong);
-            }
+            let label_len = label.len();
+            ensure!(label_len <= MAX_LABEL_LENGTH.into(), WriteLabelTooLongSnafu);
 
-            buf.push(label.len() as u8);
+            buf.push(label_len as u8);
             n += buf.write(&mut label.bytes());
         }
 
@@ -183,28 +183,19 @@ impl Writeable for Name {
     }
 }
 
-impl Display for Name {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_dotted_string())
-    }
-}
+impl FromStr for Name {
+    type Err = NameParseError;
 
-impl TryFrom<String> for Name {
-    type Error = NameError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        ensure!(input.is_ascii(), NonAsciiSnafu);
         let mut name = Self::default();
 
         // If root, return Name::default()
-        if value == "." {
+        if input == "." {
             return Ok(name);
         }
 
-        if !value.is_ascii() {
-            return Err(NameError::InvalidDomainNameLabelByte);
-        }
-
-        let parts = value.split('.');
+        let parts = input.split('.');
         for part in parts {
             if !part.is_empty() {
                 name.add_label(part.as_bytes().try_into()?)?;
@@ -212,22 +203,6 @@ impl TryFrom<String> for Name {
         }
 
         Ok(name)
-    }
-}
-
-impl FromStr for Name {
-    type Err = NameError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::try_from(s.to_string())
-    }
-}
-
-impl TryFrom<&str> for Name {
-    type Error = NameError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::try_from(value.to_string().to_lowercase())
     }
 }
 
@@ -242,6 +217,12 @@ impl TryFrom<&[Label]> for Name {
         }
 
         Ok(name)
+    }
+}
+
+impl Display for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_dotted_string())
     }
 }
 
@@ -302,13 +283,15 @@ impl Name {
     /// # Ok::<(), portal::types::dns::NameError>(())
     /// ```
     pub fn add_label(&mut self, label: Label) -> Result<(), NameError> {
-        if self.size() + label.0.len() > MAX_DOMAIN_LENGTH.into() {
-            return Err(NameError::DomainNameTooLong);
-        }
+        ensure!(
+            self.size() + label.0.len() <= MAX_LABEL_LENGTH.into(),
+            DomainNameTooLongSnafu
+        );
 
-        if label.0.len() > MAX_LABEL_LENGTH.into() {
-            return Err(NameError::DomainNameLabelTooLong);
-        }
+        ensure!(
+            label.0.len() <= MAX_LABEL_LENGTH.into(),
+            WriteLabelTooLongSnafu
+        );
 
         self.labels.push(label);
         Ok(())
@@ -479,72 +462,3 @@ impl<'a> DoubleEndedIterator for NameIterator<'a> {
 }
 
 impl<'a> ExactSizeIterator for NameIterator<'a> {}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-pub struct Label(Vec<u8>);
-
-impl TryFrom<&[u8]> for Label {
-    type Error = NameError;
-
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if bytes.len() > MAX_LABEL_LENGTH.into() {
-            return Err(NameError::DomainNameLabelTooLong);
-        }
-
-        let bytes = bytes
-            .iter()
-            .cloned()
-            .map_while(validate_domain_name_byte)
-            .collect();
-
-        Ok(Self(bytes))
-    }
-}
-
-// TODO (Techassi): Check if the str contains any non allowed chars
-impl TryFrom<&str> for Label {
-    type Error = NameError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::try_from(value.to_lowercase().as_bytes())
-    }
-}
-
-impl ToString for Label {
-    fn to_string(&self) -> String {
-        match String::from_utf8(self.0.clone()) {
-            Ok(s) => s,
-            Err(_) => String::new(),
-        }
-    }
-}
-
-impl Label {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    // TODO (Techassi): This ideally should not clone, but we need to introduce
-    // lifetimes across Label, Name and types using Name, e.g. Question
-    pub fn bytes(&self) -> Vec<u8> {
-        self.0.clone()
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-fn validate_domain_name_byte(byte: u8) -> Option<u8> {
-    match byte {
-        45 => Some(byte),           // Hyphen
-        48..=57 => Some(byte),      // Digits
-        65..=90 => Some(byte + 32), // Uppercase letters
-        97..=122 => Some(byte),     // Lowercase letters
-        _ => None,
-    }
-}

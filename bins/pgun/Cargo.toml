@@ -8,7 +8,7 @@ portal-proto = { path = "../../crates/proto", features = ["clap"] }
 portal-common = { path = "../../crates/common" }
 portal-client = { path = "../../crates/client" }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
+snafu = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 clap = { workspace = true }

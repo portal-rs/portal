@@ -8,6 +8,6 @@ name = "portal_common"
 path = "src/lib.rs"
 
 [dependencies]
-thiserror = { workspace = true }
+snafu = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }

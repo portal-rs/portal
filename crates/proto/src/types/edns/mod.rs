@@ -1,4 +1,9 @@
-use binbuf::prelude::*;
+use binbuf::{
+    bytes_written,
+    read::{ReadBuffer, ReadError, Readable},
+    write::{WriteBuffer, WriteError, Writeable},
+    Endianness,
+};
 
 mod code;
 mod data;
@@ -17,7 +22,7 @@ pub struct Option {
 }
 
 impl Readable for Option {
-    type Error = BufferError;
+    type Error = ReadError;
 
     fn read<E: Endianness>(buf: &mut ReadBuffer) -> Result<Self, Self::Error> {
         let code = OptionCode::read::<E>(buf)?;
@@ -29,7 +34,7 @@ impl Readable for Option {
 }
 
 impl Writeable for Option {
-    type Error = BufferError;
+    type Error = WriteError;
 
     fn write<E: Endianness>(&self, buf: &mut WriteBuffer) -> Result<usize, Self::Error> {
         let n = bytes_written! {
